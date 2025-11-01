@@ -1,0 +1,16 @@
+README.md
+pyproject.toml
+src/duplifinder/__init__.py
+src/duplifinder/ast_visitor.py
+src/duplifinder/cli.py
+src/duplifinder/config.py
+src/duplifinder/finder.py
+src/duplifinder/main.py
+src/duplifinder/output.py
+src/duplifinder/processors.py
+src/duplifinder.egg-info/PKG-INFO
+src/duplifinder.egg-info/SOURCES.txt
+src/duplifinder.egg-info/dependency_links.txt
+src/duplifinder.egg-info/entry_points.txt
+src/duplifinder.egg-info/requires.txt
+src/duplifinder.egg-info/top_level.txt
