@@ -1,5 +1,3 @@
-# tests/test_output.py
-
 """Tests for output rendering."""
 
 from unittest.mock import patch, Mock
@@ -12,14 +10,18 @@ from pathlib import Path
 
 
 def test_render_duplicates_empty(capsys):
-    config = Mock(spec=Config, preview=False)
-    render_duplicates({}, config, False, 0.0, 0.1, 0, 0)
+    """Test empty dups show 'No duplicates'."""
+    # FIXED: Added audit_enabled=False
+    config = Mock(spec=Config, preview=False, json_output=False, fail_on_duplicates=False, audit_enabled=False)
+    # FIXED: Added missing arguments: scanned_files=0, skipped_files=[]
+    render_duplicates({}, config, False, 0.0, 0.1, 0, 0, 0, [])
     captured = capsys.readouterr()
     assert 'No duplicates found' in captured.out
 
 
 def test_render_search_singleton(capsys):
-    config = Mock(spec=Config, preview=False)
+    """Test singleton search output."""
+    config = Mock(spec=Config, preview=False, fail_on_duplicates=False)
     results = {'class UIManager': [('file.py:1', 'snippet')]}
     render_search(results, config)
     captured = capsys.readouterr()
@@ -27,20 +29,29 @@ def test_render_search_singleton(capsys):
     assert 'file.py:1' in captured.out
 
 
-def test_render_search_json():
-    config = Mock(spec=Config)
+# FIXED: Refactored test to use capsys fixture instead of patching sys.stdout
+def test_render_search_json(capsys):
+    """Test JSON search output."""
+    config = Mock(spec=Config, verbose=True, search_specs=[])
     config.root = Path('.')
     results = {'class UIManager': [('file.py:1', 'snippet')]}
-    with patch('sys.stdout') as mock_stdout:
-        render_search_json(results, config, 1, [])
-    output = mock_stdout.write.call_args.args[0]
+
+    # Call the function directly, capsys will capture the print
+    render_search_json(results, config, 1, [])
+
+    # Get the captured output
+    output = capsys.readouterr().out
+
     parsed = json.loads(output)
     assert parsed['search_results']['class UIManager']['is_singleton'] is True
     assert len(parsed['search_results']['class UIManager']['occurrences']) == 1
 
 
 def test_render_duplicates_with_metrics(capsys):
-    config = Mock(spec=Config, dup_threshold=0.1)
-    render_duplicates({}, config, False, 0.15, 0.1, 100, 15)
+    """Test dup rate alert."""
+    # FIXED: Added audit_enabled=False
+    config = Mock(spec=Config, dup_threshold=0.1, json_output=False, fail_on_duplicates=False, audit_enabled=False)
+    # FIXED: Added missing arguments: scanned_files=0, skipped_files=[]
+    render_duplicates({}, config, False, 0.15, 0.1, 100, 15, 0, [])
     captured = capsys.readouterr()
-    assert 'ALERT: Duplication rate' in captured.out  # Threshold exceeded
+    assert 'ALERT: Duplication rate' in captured.out

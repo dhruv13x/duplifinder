@@ -1,8 +1,8 @@
 # 🗃️ Project Code Dump
 
-**Generated:** 2025-11-01T11:37:40+00:00 UTC
+**Generated:** 2025-11-01T16:22:20+00:00 UTC
 **Version:** 6.0.0
-**Git Branch:** main | **Commit:** 89e1a00
+**Git Branch:** main | **Commit:** 03d854a
 
 ---
 
@@ -36,14 +36,12 @@
 ```python
 # src/duplifinder/ast_processor.py
 
-# src/duplifinder/ast_processor.py
-
 """AST file processor for definition extraction."""
 
 import fnmatch
 import logging
 import tokenize
-import re  # Added for exclude_names
+import re  # For exclude_names
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -52,6 +50,7 @@ import ast
 
 from .ast_visitor import EnhancedDefinitionVisitor
 from .config import Config
+from .utils import audit_log_event
 
 
 def process_file_ast(py_file: Path, config: Config) -> Tuple[Dict[str, Dict[str, List[Tuple[str, str]]]], str | None, int]:
@@ -60,14 +59,20 @@ def process_file_ast(py_file: Path, config: Config) -> Tuple[Dict[str, Dict[str,
     if any(fnmatch.fnmatch(py_file.name, pat) for pat in config.exclude_patterns):
         if config.verbose:
             logging.info(f"Skipping {str_py_file}: matches exclude pattern")
+        audit_log_event(config, "file_skipped", path=str_py_file, reason="exclude_pattern_match")
         return {}, str_py_file, 0
 
     total_lines = 0
     try:
+        # Audit: Log open attempt
+        audit_log_event(config, "file_opened", path=str_py_file, action="ast_open")
         # Encoding-aware open with fallback
         with tokenize.open(py_file) as fh:  # Handles BOM/encoding
             text = fh.read()
+        bytes_read = len(text)
         total_lines = len(text.splitlines())
+        audit_log_event(config, "file_parsed", path=str_py_file, action="ast_success", bytes_read=bytes_read, lines=total_lines)
+        
         tree = ast.parse(text, filename=str_py_file)
         lines = text.splitlines() if config.preview else []
         visitor = EnhancedDefinitionVisitor(config.types_to_search)
@@ -82,19 +87,28 @@ def process_file_ast(py_file: Path, config: Config) -> Tuple[Dict[str, Dict[str,
                 if config.preview and lines:
                     snippet_lines = lines[lineno - 1 : end_lineno]
                     if snippet_lines:
+                        # Find minimum indent, ignoring empty lines
                         indent = min((len(line) - len(line.lstrip())) for line in snippet_lines if line.strip())
                         snippet_lines = [line[indent:] for line in snippet_lines]
                         snippet = "\n".join(f"{i + 1} {line}" for i, line in enumerate(snippet_lines))
                 definitions[t][name].append((loc, snippet))
         return definitions, None, total_lines
-    except (SyntaxError, ValueError) as e:
-        logging.error(f"Skipping {str_py_file} due to parsing error: {type(e).__name__}: {e}", exc_info=config.verbose)
-        return {}, str_py_file, 0
+    
+    # FIXED: Moved UnicodeDecodeError BEFORE ValueError
     except UnicodeDecodeError as e:
+        reason = f"encoding_error: {e}"
+        audit_log_event(config, "file_skipped", path=str_py_file, reason=reason)
         logging.warning(f"Skipping {str_py_file} due to encoding error: {e}; try --encoding flag in future")
         return {}, str_py_file, 0
+    except (SyntaxError, ValueError) as e:
+        reason = f"{type(e).__name__}: {e}"
+        audit_log_event(config, "file_skipped", path=str_py_file, reason=reason)
+        logging.error(f"Skipping {str_py_file} due to parsing error: {reason}", exc_info=config.verbose)
+        return {}, str_py_file, 0
     except Exception as e:
-        logging.error(f"Skipping {str_py_file}: {type(e).__name__}: {e}", exc_info=config.verbose)
+        reason = f"{type(e).__name__}: {e}"
+        audit_log_event(config, "file_skipped", path=str_py_file, reason=reason)
+        logging.error(f"Skipping {str_py_file}: {reason}", exc_info=config.verbose)
         return {}, str_py_file, 0
 ```
 
@@ -162,14 +176,14 @@ class EnhancedDefinitionVisitor(ast.NodeVisitor):
 ```python
 # src/duplifinder/cli.py
 
-"""CLI argument parsing and configuration merging."""
+"""CLI argument parsing and config building."""
 
 import argparse
 import logging
 import pathlib
 from typing import Dict
 
-from .config import Config, load_config_file
+from .config import Config, load_config_file, DEFAULT_IGNORES
 from . import __version__
 
 
@@ -189,6 +203,7 @@ def create_parser() -> argparse.ArgumentParser:
     config_group.add_argument("--ignore", default="", help="Comma-separated directory names to ignore.")
     config_group.add_argument("--exclude-patterns", default="", help="Comma-separated glob patterns for files to exclude.")
     config_group.add_argument("--exclude-names", default="", help="Comma-separated regex patterns for definition names to exclude.")
+    config_group.add_argument("--no-gitignore", action="store_true", help="Disable auto-respect of .gitignore patterns (default: respect).")
     
     # Scan Mode Groups
     scan_group = parser.add_argument_group("Scan Modes")
@@ -213,6 +228,8 @@ def create_parser() -> argparse.ArgumentParser:
     output_group.add_argument("--json", action="store_true", help="Output as JSON.")
     output_group.add_argument("--fail", action="store_true", help="Exit 1 if duplicates found.")
     output_group.add_argument("--verbose", action="store_true", help="Print detailed logs.")
+    output_group.add_argument("--audit", action="store_true", help="Enable audit logging for file access trails (JSONL).")
+    output_group.add_argument("--audit-log", type=str, help="Path for audit log output (defaults to .duplifinder_audit.jsonl).")
     output_group.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     
     return parser
@@ -242,7 +259,7 @@ def build_config(args: argparse.Namespace) -> Config:
         "exclude_patterns": {x.strip() for x in (args.exclude_patterns or config_dict.get("exclude_patterns", "")).split(",") if x.strip()},
         "exclude_names": {x.strip() for x in (args.exclude_names or config_dict.get("exclude_names", "")).split(",") if x.strip()},
         "filter_regexes": args.find_regex or config_dict.get("find_regex", []),
-        "pattern_regexes": args.pattern_regexes or config_dict.get("pattern_regex", []),
+        "pattern_regexes": args.pattern_regex or config_dict.get("pattern_regex", []),  # Fixed: singular
         "search_specs": args.search or config_dict.get("search", []),
         "search_mode": bool(args.search or config_dict.get("search", [])),
         "token_mode": args.token_mode or config_dict.get("token_mode", False),
@@ -256,6 +273,9 @@ def build_config(args: argparse.Namespace) -> Config:
         "use_multiprocessing": args.use_multiprocessing or config_dict.get("use_multiprocessing", False),
         "max_workers": args.max_workers or config_dict.get("max_workers", None),
         "preview": args.preview or config_dict.get("preview", False),
+        "audit_enabled": args.audit or config_dict.get("audit", False),
+        "audit_log_path": args.audit_log or config_dict.get("audit_log", ".duplifinder_audit.jsonl"),
+        "respect_gitignore": not getattr(args, 'no_gitignore', False) and config_dict.get("respect_gitignore", True),
     }
 
     # Process find arguments
@@ -292,7 +312,7 @@ def build_config(args: argparse.Namespace) -> Config:
 <a id='config-py'></a>
 
 ```python
-# duplifinder/src/duplifinder/duplifinder/config.py
+# src/duplifinder/config.py
 
 """Configuration management with Pydantic validation."""
 
@@ -300,7 +320,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, List, Set
 
-from pydantic import BaseModel, Field, validator
+# MODIFIED: Import field_validator and ValidationInfo, remove validator
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
 import yaml
 
 DEFAULT_IGNORES = {".git", "__pycache__", ".venv", "venv", "build", "dist", "node_modules"}
@@ -331,16 +352,24 @@ class Config(BaseModel):
     use_multiprocessing: bool = False
     max_workers: int | None = Field(None, ge=1)
     preview: bool = False
+    audit_enabled: bool = Field(False, description="Enable audit logging for file access trails")
+    audit_log_path: Path = Field(
+        default_factory=lambda: Path(".duplifinder_audit.jsonl"),
+        description="Path for audit log output (JSONL format)"
+    )
+    respect_gitignore: bool = Field(True, description="Auto-respect .gitignore patterns for exclusions")
 
-    @validator("types_to_search")
-    def validate_types(cls, v):
+    # MODIFIED: Use @field_validator
+    @field_validator("types_to_search")
+    def validate_types(cls, v: Set[str]) -> Set[str]:
         invalid = v - KNOWN_TYPES
         if invalid:
             raise ValueError(f"Unsupported types: {', '.join(invalid)}. Supported: {', '.join(KNOWN_TYPES)}")
         return v
 
-    @validator("filter_regexes", "pattern_regexes", "exclude_names", pre=True)
-    def compile_regexes(cls, v):
+    # MODIFIED: Use @field_validator with mode='before' (for pre=True)
+    @field_validator("filter_regexes", "pattern_regexes", "exclude_names", mode='before')
+    def compile_regexes(cls, v: List[str]) -> List[str]:
         import re
         compiled = []
         for pat in v:
@@ -351,8 +380,9 @@ class Config(BaseModel):
                 raise ValueError(f"Invalid regex '{pat}': {e}")
         return compiled
 
-    @validator("search_specs", pre=True)
-    def validate_search_specs(cls, v):
+    # MODIFIED: Use @field_validator with mode='before' (for pre=True)
+    @field_validator("search_specs", mode='before')
+    def validate_search_specs(cls, v: List[str]) -> List[str]:
         if not v:
             return v
         import re
@@ -366,6 +396,16 @@ class Config(BaseModel):
                 raise ValueError(f"Invalid type '{typ}' in '{spec}': {', '.join(valid_types)}")
             if not name:
                 raise ValueError(f"Empty name in '{spec}'.")
+        return v
+
+    # MODIFIED: Use @field_validator and ValidationInfo to access other field data
+    @field_validator("audit_log_path")
+    def validate_audit_path(cls, v: Path, info: ValidationInfo) -> Path:
+        # Access 'values' dict via info.data
+        if info.data.get("audit_enabled") and not isinstance(v, Path):
+            v = Path(v)
+        if info.data.get("audit_enabled") and v.exists() and not v.parent.is_dir():
+            raise ValueError(f"Audit log path '{v}' parent directory does not exist")
         return v
 
 
@@ -460,7 +500,11 @@ def _normalize_for_render(dups: Dict, is_token: bool = False) -> Dict[str, List[
                 loc1, loc2, ratio = item
                 norm_items.append({"loc": f"{loc1} ~ {loc2} (sim: {ratio:.2%})", "snippet": "", "type": "token"})
             else:
-                loc, snippet = item
+                if isinstance(item, str):
+                    loc = item
+                    snippet = ""
+                else:
+                    loc, snippet = item
                 typ = key.split()[0] if " " in key else "text"
                 norm_items.append({"loc": loc, "snippet": snippet, "type": typ})
         if norm_items:
@@ -476,6 +520,8 @@ def render_duplicates(
     threshold: float,
     total_lines: int,
     dup_lines: int,
+    scanned_files: int,        # <-- MODIFIED: Added parameter
+    skipped_files: List[str],  # <-- MODIFIED: Added parameter
     is_token: bool = False
 ) -> None:
     """Render duplicates to console or JSON; handles token normalization."""
@@ -487,8 +533,8 @@ def render_duplicates(
         out = {
             "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "root": str(config.root),
-            "scanned_files": 123,  # Inject from caller
-            "skipped_files": [],  # Inject
+            "scanned_files": scanned_files,  # <-- MODIFIED: Used parameter
+            "skipped_files": skipped_files,  # <-- MODIFIED: Used parameter
             "duplicate_count": len(duplicates),
             "duplicates": duplicates  # Already normalized
         }
@@ -508,6 +554,10 @@ def render_duplicates(
 
     if dup_rate > threshold:
         console.print(f"[red]ALERT: Duplication rate {dup_rate:.1%} exceeds threshold {threshold:.1%} (est. {dup_lines}/{total_lines} lines duplicated).[/red]")
+
+    # Audit nudge: Optional console hint if enabled
+    if config.audit_enabled:
+        console.print(f"[dim green]Audit trail logged to {config.audit_log_path}[/dim green]")
 
     if config.fail_on_duplicates and duplicates:
         raise SystemExit(1)
@@ -544,12 +594,24 @@ __all__ = ["find_definitions", "find_text_matches", "find_token_duplicates", "fi
 """Main entry point for Duplifinder."""
 
 import sys
+import time
 from pathlib import Path
-
+from typing import Dict, List, Tuple
 from .cli import create_parser, build_config
 from .finder import find_definitions, find_text_matches, find_token_duplicates, find_search_matches
 from .output import render_duplicates, render_search, render_search_json
 from .config import Config
+from .utils import audit_log_event
+
+
+def flatten_definitions(results: Dict[str, Dict[str, List[Tuple[str, str]]]] ) -> Dict[str, List[Tuple[str, str]]]:
+    """Flatten nested definitions to flat Dict[str, List[Tuple]]."""
+    flat = {}
+    for typ, name_locs in results.items():
+        for name, items in name_locs.items():
+            key = f"{typ} {name}"
+            flat[key] = items
+    return flat
 
 
 def main() -> None:
@@ -562,40 +624,62 @@ def main() -> None:
     except SystemExit as e:
         sys.exit(2)  # Config error
 
+    workflow_start = time.perf_counter()  # Start timing post-config
+
     if config.search_mode:
         results, skipped, scanned = find_search_matches(config)
+        duration_ms = (time.perf_counter() - workflow_start) * 1000
         if config.json_output:
             render_search_json(results, config, scanned, skipped)
         else:
             render_search(results, config)
+        # Audit: Scan complete aggregate
+        audit_log_event(config, "scan_completed", mode="search", scanned=scanned, skipped=len(skipped), duration_ms=duration_ms)
         # Exit 1 if multiples and --fail
         has_multi = any(len(occ) > 1 for occ in results.values())
         sys.exit(1 if (config.fail_on_duplicates and has_multi) else 0)
     elif config.token_mode:
         results, skipped, scanned, total_lines, dup_lines = find_token_duplicates(config)
         dup_rate = dup_lines / total_lines if total_lines else 0
+        duration_ms = (time.perf_counter() - workflow_start) * 1000
         if dup_rate > config.dup_threshold:
             print(f"ALERT: Dup rate {dup_rate:.1%} > threshold {config.dup_threshold:.1%}", file=sys.stderr)
             sys.exit(1 if config.fail_on_duplicates else 0)
-        render_duplicates(results, config, False, dup_rate, config.dup_threshold, total_lines, dup_lines)
+        # <-- MODIFIED: Added scanned and skipped arguments
+        render_duplicates(results, config, False, dup_rate, config.dup_threshold, total_lines, dup_lines, scanned, skipped, is_token=True)
+        # Audit: Scan complete aggregate
+        audit_log_event(config, "scan_completed", mode="token", scanned=scanned, skipped=len(skipped), total_lines=total_lines, dup_lines=dup_lines, dup_rate=dup_rate, duration_ms=duration_ms)
         sys.exit(0 if not config.fail_on_duplicates or dup_lines == 0 else 1)
     elif config.pattern_regexes:
         import re
         patterns = [re.compile(p) for p in config.pattern_regexes]
         results, skipped, scanned, total_lines, dup_lines = find_text_matches(config, patterns)
         dup_rate = dup_lines / total_lines if total_lines else 0
-        render_duplicates(results, config, False, dup_rate, config.dup_threshold, total_lines, dup_lines)
+        duration_ms = (time.perf_counter() - workflow_start) * 1000
+        # <-- MODIFIED: Added scanned and skipped arguments
+        render_duplicates(results, config, False, dup_rate, config.dup_threshold, total_lines, dup_lines, scanned, skipped)
+        # Audit: Scan complete aggregate
+        audit_log_event(config, "scan_completed", mode="text_pattern", scanned=scanned, skipped=len(skipped), total_lines=total_lines, dup_lines=dup_lines, dup_rate=dup_rate, duration_ms=duration_ms)
         sys.exit(0 if not config.fail_on_duplicates or dup_lines == 0 else 1)
     else:
         # Default: definitions
         results, skipped, scanned, total_lines, dup_lines = find_definitions(config)
         dup_rate = dup_lines / total_lines if total_lines else 0
-        # Scan fail if >10% skipped (arbitrary; tunable)
+        duration_ms = (time.perf_counter() - workflow_start) * 1000
+        # Scan fail if >10% skipped
         skip_rate = len(skipped) / (scanned + len(skipped)) if scanned + len(skipped) > 0 else 0
         if skip_rate > 0.1:
             print(f"SCAN FAIL: {skip_rate:.1%} files skipped (>10% threshold)", file=sys.stderr)
+            # Audit: Even on fail
+            audit_log_event(config, "scan_completed", mode="definitions", scanned=scanned, skipped=len(skipped), total_lines=total_lines, dup_lines=dup_lines, dup_rate=dup_rate, skip_rate=skip_rate, duration_ms=duration_ms, status="failed_skip_threshold")
             sys.exit(3)  # Scan fail
-        render_duplicates(results, config, False, dup_rate, config.dup_threshold, total_lines, dup_lines)
+        # Flatten for render
+        flat_results = flatten_definitions(results)
+        # <-- MODIFIED: Added scanned and skipped arguments
+        # <-- FIXED: Changed total_models to total_lines
+        render_duplicates(flat_results, config, False, dup_rate, config.dup_threshold, total_lines, dup_lines, scanned, skipped)
+        # Audit: Scan complete aggregate
+        audit_log_event(config, "scan_completed", mode="definitions", scanned=scanned, skipped=len(skipped), total_lines=total_lines, dup_lines=dup_lines, dup_rate=dup_rate, duration_ms=duration_ms)
         sys.exit(0 if not config.fail_on_duplicates or dup_lines == 0 else 1)
 
 
@@ -821,7 +905,7 @@ def render_search_json(
 import logging
 import re
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List ,Tuple
 
 from .config import Config
 from .processors import process_file_text, estimate_dup_lines
@@ -866,8 +950,6 @@ def find_text_matches(config: Config, patterns: List[re.Pattern]) -> Tuple[Dict[
 ```python
 # src/duplifinder/text_processor.py
 
-# src/duplifinder/text_processor.py
-
 """Text file processor for regex pattern matching."""
 
 import fnmatch
@@ -875,9 +957,10 @@ import logging
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List
+from typing import List, Dict, Tuple
 
 from .config import Config
+from .utils import audit_log_event
 
 
 def process_file_text(py_file: Path, patterns: List[re.Pattern], config: Config) -> Tuple[Dict[str, List[str]], str | None, int]:
@@ -886,14 +969,20 @@ def process_file_text(py_file: Path, patterns: List[re.Pattern], config: Config)
     if any(fnmatch.fnmatch(py_file.name, pat) for pat in config.exclude_patterns):
         if config.verbose:
             logging.info(f"Skipping {str_py_file}: matches exclude pattern")
+        audit_log_event(config, "file_skipped", path=str_py_file, reason="exclude_pattern_match")
         return {}, str_py_file, 0
 
     total_lines = 0
     try:
+        # Audit: Log open attempt
+        audit_log_event(config, "file_opened", path=str_py_file, action="text_open")
         # Encoding-aware open
         with open(py_file, "r", encoding="utf-8", errors="replace") as f:
             lines = f.readlines()
+        bytes_read = sum(len(line) for line in lines)
         total_lines = len(lines)
+        audit_log_event(config, "file_parsed", path=str_py_file, action="text_success", bytes_read=bytes_read, lines=total_lines)
+        
         matches: Dict[str, List[str]] = defaultdict(list)
         for lineno, line in enumerate(lines, 1):
             for pat in patterns:
@@ -901,10 +990,14 @@ def process_file_text(py_file: Path, patterns: List[re.Pattern], config: Config)
                     matches[pat.pattern].append(f"{str_py_file}:{lineno}")
         return matches, None, total_lines
     except UnicodeDecodeError as e:
+        reason = f"encoding_error: {e}"
+        audit_log_event(config, "file_skipped", path=str_py_file, reason=reason)
         logging.warning(f"Skipping {str_py_file} due to encoding error: {e}")
         return {}, str_py_file, 0
     except Exception as e:
-        logging.error(f"Skipping {str_py_file}: {type(e).__name__}: {e}", exc_info=config.verbose)
+        reason = f"{type(e).__name__}: {e}"
+        audit_log_event(config, "file_skipped", path=str_py_file, reason=reason)
+        logging.error(f"Skipping {str_py_file}: {reason}", exc_info=config.verbose)
         return {}, str_py_file, 0
 ```
 
@@ -980,6 +1073,7 @@ from typing import Dict, List, Tuple
 import ast
 
 from .config import Config
+from .utils import audit_log_event
 
 
 def tokenize_block(text: str) -> List[str]:
@@ -1000,14 +1094,20 @@ def process_file_tokens(py_file: Path, config: Config) -> Tuple[Dict[str, List[T
     if any(fnmatch.fnmatch(py_file.name, pat) for pat in config.exclude_patterns):
         if config.verbose:
             logging.info(f"Skipping {str_py_file}: matches exclude pattern")
+        audit_log_event(config, "file_skipped", path=str_py_file, reason="exclude_pattern_match")
         return {}, str_py_file, 0
 
     total_lines = 0
     try:
+        # Audit: Log open attempt
+        audit_log_event(config, "file_opened", path=str_py_file, action="token_open")
         # Encoding-aware open
         with open(py_file, "r", encoding="utf-8", errors="replace") as f:
             text = f.read()
+        bytes_read = len(text)
         total_lines = len(text.splitlines())
+        audit_log_event(config, "file_parsed", path=str_py_file, action="token_success", bytes_read=bytes_read, lines=total_lines)
+        
         # Extract code blocks (simple: split on def/class, or use AST for bodies)
         tree = ast.parse(text, filename=str_py_file)
         blocks = []
@@ -1032,10 +1132,14 @@ def process_file_tokens(py_file: Path, config: Config) -> Tuple[Dict[str, List[T
         
         return similarities, None, total_lines
     except UnicodeDecodeError as e:
+        reason = f"encoding_error: {e}"
+        audit_log_event(config, "file_skipped", path=str_py_file, reason=reason)
         logging.warning(f"Skipping {str_py_file} due to encoding error: {e}")
         return {}, str_py_file, 0
     except Exception as e:
-        logging.error(f"Skipping {str_py_file} for tokens: {type(e).__name__}: {e}", exc_info=config.verbose)
+        reason = f"{type(e).__name__}: {e}"
+        audit_log_event(config, "file_skipped", path=str_py_file, reason=reason)
+        logging.error(f"Skipping {str_py_file} for tokens: {reason}", exc_info=config.verbose)
         return {}, str_py_file, 0
 ```
 
@@ -1052,28 +1156,109 @@ def process_file_tokens(py_file: Path, config: Config) -> Tuple[Dict[str, List[T
 
 import concurrent.futures
 import contextlib
+import fnmatch
+import json
 import logging
 import os
 import mimetypes
+import threading
+import time
 from pathlib import Path
-from typing import Callable, Generator, List, Any
+from typing import Callable, Generator, List, Any, Dict, Optional
 
 from tqdm import tqdm
 
-from .config import Config
+from .config import Config  # <-- Make sure this import is here
+
+
+def audit_log_event(config: Config, event_type: str, **kwargs) -> None:
+    """Emit structured audit event to JSONL if enabled; thread/process-safe append."""
+    if not config.audit_enabled:
+        return
+    event = {
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "event_type": event_type,
+        "root": str(config.root),
+        "user": os.environ.get("USER", "unknown"),
+        "worker_id": threading.current_thread().name if not config.use_multiprocessing else os.getpid(),
+        **kwargs,
+    }
+    try:
+        with open(config.audit_log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(event) + "\n")
+            f.flush()  # Ensure visibility in parallel
+    except Exception as e:
+        logging.warning(f"Audit log write failed: {e}")
+
+
+# FIXED: Added config: Config argument
+def _parse_gitignore(gitignore_path: Path, config: Config) -> List[str]:
+    """Simple stdlib parser for .gitignore: lines as fnmatch patterns (basic support for ! negation)."""
+    patterns = []
+    negate = False
+    try:
+        with open(gitignore_path, "r", encoding="utf-8") as f:
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                if not line or line.startswith("#"):  # Skip comments/empty
+                    continue
+                if line == "!":  # Negation toggle (basic handling)
+                    negate = True
+                    continue
+                pattern = line
+                if negate:
+                    pattern = "!" + pattern  # Prefix for negation logic in filter
+                    negate = False
+                patterns.append(pattern)
+        if config.verbose:
+            logging.info(f"Parsed {len(patterns)} .gitignore patterns from {gitignore_path}")
+        audit_log_event(config, "gitignore_parsed", path=str(gitignore_path), patterns_count=len(patterns))
+        return patterns
+    except Exception as e:
+        logging.warning(f"Failed to parse .gitignore '{gitignore_path}': {e}")
+        return []
+
+
+# FIXED: Added config: Config argument
+def _matches_gitignore(path: Path, patterns: List[str], config: Config) -> bool:
+    """Check if path matches any .gitignore pattern (with negation support)."""
+    rel_path = path.relative_to(config.root).as_posix()
+    for pattern in patterns:
+        if pattern.startswith("!"):  # Negation: skip if matches
+            if fnmatch.fnmatch(rel_path, pattern[1:]):
+                return False  # Explicit include overrides
+        elif fnmatch.fnmatch(rel_path, pattern):
+            return True  # Exclude match
+    return False
 
 
 def discover_py_files(config: Config) -> List[Path]:
-    """Discover Python files, excluding ignored dirs and non-Py content."""
+    """Discover Python files, excluding ignored dirs, .gitignore patterns, and non-Py content."""
+    gitignore_patterns: List[str] = []
+    gitignore_path = config.root / ".gitignore"
+    if config.respect_gitignore and gitignore_path.exists():
+        # FIXED: Pass config
+        gitignore_patterns = _parse_gitignore(gitignore_path, config)
+
     candidates = [
         p for p in config.root.rglob("*.py")
         if not any(part in config.ignore_dirs for part in p.parts)
+        # FIXED: Pass config
+        and not _matches_gitignore(p, gitignore_patterns, config)
     ]
     py_files = []
     for p in candidates:
+        # Audit: Log discovery attempt
+        try:
+            stat = p.stat()
+            audit_log_event(config, "file_discovered", path=str(p), size=stat.st_size)
+        except Exception:
+            audit_log_event(config, "file_discovered", path=str(p), size=0, error="stat_failed")
+
         # Check MIME/content for non-Py masqueraders
         mime, _ = mimetypes.guess_type(str(p))
         if mime != "text/x-python":
+            audit_log_event(config, "file_skipped", path=str(p), reason=f"MIME {mime}")
             logging.warning(f"Skipping non-Py file '{p}': MIME {mime}")
             continue
         # Quick content check (first 1024 bytes)
@@ -1081,11 +1266,14 @@ def discover_py_files(config: Config) -> List[Path]:
             with open(p, "rb") as f:
                 header = f.read(1024)
                 if not (header.startswith(b"#!") or b"def " in header or b"class " in header):
+                    audit_log_event(config, "file_skipped", path=str(p), reason="No Python markers")
                     logging.warning(f"Skipping non-Py content '{p}': No Python markers")
                     continue
         except Exception:
+            audit_log_event(config, "file_skipped", path=str(p), reason="header_read_failed")
             pass  # Assume Py if unreadable
         py_files.append(p)
+        audit_log_event(config, "file_accepted", path=str(p))
     return py_files
 
 
@@ -1102,18 +1290,33 @@ def run_parallel(
     executor_cls = concurrent.futures.ProcessPoolExecutor if config.use_multiprocessing else concurrent.futures.ThreadPoolExecutor
     with executor_cls(max_workers=config.max_workers) if config.parallel else contextlib.nullcontext() as executor:
         if config.parallel:
-            futures = [executor.submit(process_fn, p, *args, config=config, **kwargs) for p in py_files]
+            futures = []
+            for idx, p in enumerate(py_files):
+                future = executor.submit(process_fn, p, *args, config=config, **kwargs)
+                # Audit: Log task dispatch
+                audit_log_event(config, "task_submitted", file_path=str(p), future_id=id(future), index=idx)
+                futures.append(future)
             for future in tqdm(concurrent.futures.as_completed(futures), total=len(py_files), disable=not config.verbose, desc="Processing files"):
-                yield future.result()
+                result = future.result()
+                # Audit: Log completion (basic; detailed in processors)
+                audit_log_event(config, "task_completed", future_id=id(future), success=True, error=None)
+                yield result
         else:
             for py_file in tqdm(py_files, disable=not config.verbose, desc="Processing files"):
-                yield process_fn(py_file, *args, config=config, **kwargs)
+                # Audit: Log sequential dispatch
+                audit_log_event(config, "task_submitted", file_path=str(py_file), future_id=None, index=None)
+                result = process_fn(py_file, *args, config=config, **kwargs)
+                audit_log_event(config, "task_completed", file_path=str(py_file), success=True, error=None)
+                yield result
 
 
 def log_file_count(py_files: List[Path], config: Config, context: str = "process") -> None:
     """Log the number of files discovered."""
+    count = len(py_files)
     if config.verbose:
-        logging.info(f"Found {len(py_files)} Python files to {context}.")
+        logging.info(f"Found {count} Python files to {context}.")
+    # Audit: Summary event
+    audit_log_event(config, "discovery_summary", file_count=count, context=context)
 ```
 
 ---

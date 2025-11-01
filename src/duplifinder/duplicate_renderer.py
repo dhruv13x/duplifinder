@@ -23,7 +23,11 @@ def _normalize_for_render(dups: Dict, is_token: bool = False) -> Dict[str, List[
                 loc1, loc2, ratio = item
                 norm_items.append({"loc": f"{loc1} ~ {loc2} (sim: {ratio:.2%})", "snippet": "", "type": "token"})
             else:
-                loc, snippet = item
+                if isinstance(item, str):
+                    loc = item
+                    snippet = ""
+                else:
+                    loc, snippet = item
                 typ = key.split()[0] if " " in key else "text"
                 norm_items.append({"loc": loc, "snippet": snippet, "type": typ})
         if norm_items:
@@ -39,6 +43,8 @@ def render_duplicates(
     threshold: float,
     total_lines: int,
     dup_lines: int,
+    scanned_files: int,        # <-- MODIFIED: Added parameter
+    skipped_files: List[str],  # <-- MODIFIED: Added parameter
     is_token: bool = False
 ) -> None:
     """Render duplicates to console or JSON; handles token normalization."""
@@ -50,8 +56,8 @@ def render_duplicates(
         out = {
             "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "root": str(config.root),
-            "scanned_files": 123,  # Inject from caller
-            "skipped_files": [],  # Inject
+            "scanned_files": scanned_files,  # <-- MODIFIED: Used parameter
+            "skipped_files": skipped_files,  # <-- MODIFIED: Used parameter
             "duplicate_count": len(duplicates),
             "duplicates": duplicates  # Already normalized
         }
@@ -71,6 +77,10 @@ def render_duplicates(
 
     if dup_rate > threshold:
         console.print(f"[red]ALERT: Duplication rate {dup_rate:.1%} exceeds threshold {threshold:.1%} (est. {dup_lines}/{total_lines} lines duplicated).[/red]")
+
+    # Audit nudge: Optional console hint if enabled
+    if config.audit_enabled:
+        console.print(f"[dim green]Audit trail logged to {config.audit_log_path}[/dim green]")
 
     if config.fail_on_duplicates and duplicates:
         raise SystemExit(1)

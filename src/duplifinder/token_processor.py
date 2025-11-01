@@ -14,6 +14,7 @@ from typing import Dict, List, Tuple
 import ast
 
 from .config import Config
+from .utils import audit_log_event
 
 
 def tokenize_block(text: str) -> List[str]:
@@ -34,14 +35,20 @@ def process_file_tokens(py_file: Path, config: Config) -> Tuple[Dict[str, List[T
     if any(fnmatch.fnmatch(py_file.name, pat) for pat in config.exclude_patterns):
         if config.verbose:
             logging.info(f"Skipping {str_py_file}: matches exclude pattern")
+        audit_log_event(config, "file_skipped", path=str_py_file, reason="exclude_pattern_match")
         return {}, str_py_file, 0
 
     total_lines = 0
     try:
+        # Audit: Log open attempt
+        audit_log_event(config, "file_opened", path=str_py_file, action="token_open")
         # Encoding-aware open
         with open(py_file, "r", encoding="utf-8", errors="replace") as f:
             text = f.read()
+        bytes_read = len(text)
         total_lines = len(text.splitlines())
+        audit_log_event(config, "file_parsed", path=str_py_file, action="token_success", bytes_read=bytes_read, lines=total_lines)
+        
         # Extract code blocks (simple: split on def/class, or use AST for bodies)
         tree = ast.parse(text, filename=str_py_file)
         blocks = []
@@ -66,8 +73,12 @@ def process_file_tokens(py_file: Path, config: Config) -> Tuple[Dict[str, List[T
         
         return similarities, None, total_lines
     except UnicodeDecodeError as e:
+        reason = f"encoding_error: {e}"
+        audit_log_event(config, "file_skipped", path=str_py_file, reason=reason)
         logging.warning(f"Skipping {str_py_file} due to encoding error: {e}")
         return {}, str_py_file, 0
     except Exception as e:
-        logging.error(f"Skipping {str_py_file} for tokens: {type(e).__name__}: {e}", exc_info=config.verbose)
+        reason = f"{type(e).__name__}: {e}"
+        audit_log_event(config, "file_skipped", path=str_py_file, reason=reason)
+        logging.error(f"Skipping {str_py_file} for tokens: {reason}", exc_info=config.verbose)
         return {}, str_py_file, 0

@@ -5,7 +5,7 @@
 import logging
 import re
 from collections import defaultdict
-from typing import Dict, List
+from typing import Dict, List ,Tuple
 
 from .config import Config
 from .processors import process_file_text, estimate_dup_lines

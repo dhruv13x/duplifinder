@@ -1,208 +1,296 @@
 ```markdown
+[![PyPI version](https://badge.fury.io/py/duplifinder.svg)](https://badge.fury.io/py/duplifinder)
+[![PyPI downloads](https://img.shields.io/pypi/dm/duplifinder.svg)](https://pypistats.org/packages/duplifinder)
+[![Test Coverage](https://img.shields.io/badge/coverage-90%25%2B-brightgreen.svg)](https://github.com/dhruv13x/duplifinder/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python Versions](https://img.shields.io/pypi/pyversions/duplifinder.svg)](https://pypi.org/project/duplifinder/)
+
 # Duplifinder
 
-Detect duplicate Python definitions across a project (classes, functions, async functions, and text patterns).
+**Detect and refactor duplicate Python code**—classes, functions, async defs, text patterns, and token similarities—for cleaner, more maintainable codebases.
 
-Duplifinder scans a codebase and reports repeated definitions or matching text patterns so you can refactor, deduplicate, and improve maintainability.
+Duplifinder leverages Python's AST for precise scanning, parallelizes for large repos, and integrates seamlessly into CI/CD pipelines to enforce DRY principles and catch regressions early.
 
-## Highlights
+## Table of Contents
 
-- Fast, file-system friendly scanning using Python AST
-- Detects duplicate class, def, and async def definitions (including methods inside classes)
-- Text-pattern mode for arbitrary duplicate snippet detection via regex
-- JSON output for integration into CI/CD pipelines
-- Preview mode to show formatted definition snippets
-- Parallel scanning with optional multiprocessing for large repositories
-- Configurable via CLI flags or a YAML config file
+- [Features](#features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [CLI Reference](#cli-reference)
+- [Output Formats](#output-formats)
+- [Advanced Usage](#advanced-usage)
+- [Best Practices](#best-practices)
+- [Development](#development)
+- [Contributing](#contributing)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
 
-## Quick install
+## Features
+
+- **AST-Powered Detection**: Identifies duplicates in `ClassDef`, `FunctionDef`, `AsyncFunctionDef` (including class methods as `ClassName.method`).
+- **Text Pattern Matching**: Regex-based search for arbitrary snippets (e.g., TODOs, FIXMEs).
+- **Token Similarity**: Detect near-duplicates via normalized token diffs (e.g., similar function bodies).
+- **Search Mode**: Locate all occurrences of specific definitions (singletons or multiples).
+- **Parallel Processing**: Threaded or multiprocessing for monorepos (GIL-aware; configurable workers).
+- **Rich Outputs**: Human-readable console (with Rich tables), JSON for automation.
+- **Configurable Filtering**: Glob excludes, regex name filters, ignore dirs.
+- **Audit Logging**: Opt-in JSONL trails for file access/compliance (v6.1.0+).
+- **CI-Friendly**: Exit codes for fails, dup thresholds, and metrics export.
+
+## Installation
 
 ```bash
-# From project root (editable install)
-pip install -e .
+# From PyPI (stable)
+pip install duplifinder
 
-# Or build and install
-pip install .
+# From GitHub (latest)
+pip install git+https://github.com/dhruv13x/duplifinder.git@main
+
+# Editable dev install
+git clone https://github.com/dhruv13x/duplifinder.git
+cd duplifinder
+pip install -e ".[dev]"
 ```
 
-## Quick start
+Requires Python 3.12+. No additional setup for core usage; dev extras include pytest/mypy/black.
 
-Scan the current repository for duplicate definitions (default: classes, functions, async functions):
+## Quick Start
+
+Scan the current directory for duplicates (defaults to classes/functions/async functions):
 
 ```bash
-# Run default scan and show results on console
+# Basic scan with console output
 duplifinder .
 
-# Show preview snippets and verbose logging
+# With previews and verbose logs
 duplifinder . --preview --verbose
 
-# Fail CI if any duplicates found
-duplifinder . --fail
-
-# Output machine-readable JSON
+# JSON for CI parsing
 duplifinder . --json > duplicates.json
 
-# Token-based near-duplicates (e.g., similar function bodies)
+# Fail CI on duplicates
+duplifinder . --fail
+```
+
+### Text Pattern Mode
+
+Hunt duplicated lines via regex:
+
+```bash
+# Find TODOs with min 2 occurrences
+duplifinder . --pattern-regex "TODO:" --min 2 --json
+```
+
+### Token Similarity (Near-Dups)
+
+For similar but not identical code:
+
+```bash
 duplifinder . --token-mode --similarity-threshold 0.85 --preview
+```
 
-# Scan with metrics and alert if >10% dup
-duplifinder . --json --dup-threshold 0.1
+### Search Specific Definitions
 
-# Search all occurrences of a class (singleton or multi)
+List all occurrences (even singles):
+
+```bash
+# Singleton check for a class
 duplifinder . -s class UIManager --preview
 
 # Multiple specs
 duplifinder . -s class UIManager -s def dashboard_menu --json
-
 ```
 
-Text-pattern mode (find duplicated text by regex):
+### Focused Scans
 
 ```bash
-# Find duplicated occurrences of lines matching the regex "TODO:"
-duplifinder . --pattern-regex "TODO:" --min 2 --json
-```
-
-Find specific types/names:
-
-```bash
-# Search only for classes
+# Only classes
 duplifinder . -f class
 
-# Search for a specific definition name
-duplifinder . -f "MyClass"
+# Specific name
+duplifinder . -f MyClass
 
-# Mix types and names
-duplifinder . -f class -f MyClass
+# Types + names
+duplifinder . -f class -f HelperFunc
 ```
 
 ## Configuration
 
-Duplifinder reads configuration from the CLI and from a YAML file (path provided via `--config`). CLI arguments take precedence.
+CLI flags override a `.duplifinder.yaml` (specified via `--config`).
 
-Example `.duplifinder.yaml`:
 ```yaml
+# .duplifinder.yaml
 root: .
 ignore: ".git,__pycache__,venv"
 exclude_patterns: "*.pyc,tests/*"
 exclude_names: "^_.*,experimental_.*"
-find: ["class", "def"]
-find_regex: ["class UI.*Manager", "def helper_.*"]
-pattern_regex: []
+find: ["class", "def"]  # Default: all types
+find_regex: ["class UI.*Manager"]
+pattern_regex: ["TODO:"]
+search: ["class UIManager"]  # For -s mode
 json: false
 fail: false
 min: 2
 verbose: true
 parallel: true
-use_multiprocessing: false
+use_multiprocessing: false  # For CPU-bound (avoids GIL)
 max_workers: 8
 preview: true
+audit: true  # v6.1.0+: Enable file access trails
+audit_log: "./logs/audit.jsonl"
+similarity_threshold: 0.8
+dup_threshold: 0.1  # Alert if >10% dup rate
 ```
 
-## CLI reference (common flags)
+Load with `duplifinder . --config .duplifinder.yaml`.
 
-| Flag | Description |
-|------|-------------|
-| `<root>` | One or more root paths to scan (default: current dir) |
-| `--config <path>` | Path to YAML config file |
-| `--ignore` | Comma-separated directory names to ignore (merged with defaults) |
-| `--exclude-patterns` | Comma-separated glob patterns for file names to skip |
-| `--exclude-names` | Comma-separated regex patterns for definition names to exclude |
-| `-f, --find` | Types and names to find (e.g., `class`, `def`, `async_def`, or `MyClass`) |
-| `--find-regex` | Regex patterns for types and names (e.g., `class UI.*Manager`) |
-| `--pattern-regex` | Regex patterns for duplicate code snippet detection (text mode) |
-| `-p, --preview` | Show formatted preview (snippet) of duplicates |
-| `--json` | Output as JSON |
-| `--fail` | Exit with status code 1 if duplicates were found (useful for CI) |
-| `--min` | Minimum occurrences to be considered a duplicate (default: 2) |
-| `--verbose` | Verbose logging |
-| `--parallel` | Enable parallel file processing |
-| `--use-multiprocessing` | Use multiprocessing (ProcessPool) instead of threads |
-| `--max-workers` | Max workers when parallel processing is enabled |
-| `--version` | Print program version |
-| --token-mode | Enable token-based detection for non-definition code blocks |
-| --similarity-threshold <float> | Similarity ratio for token dups (0.0-1.0, default: 0.8) |
-| --dup-threshold <float> | Duplication rate threshold for alerts (0.0-1.0, default: 0.1) |
-| -s, --search <specs> | Search all occurrences of specific definitions (e.g., 'class UIManager'); lists even singles. Requires 'type name'. |
+## CLI Reference
 
-## Output formats
+| Flag | Description | Default |
+|------|-------------|---------|
+| `<root>` | Scan root(s) (dirs/files) | `.` |
+| `--config <path>` | YAML config file | None |
+| `--ignore <dirs>` | Comma-separated ignores (e.g., `.git,build`) | Built-ins |
+| `--exclude-patterns <globs>` | File globs to skip (e.g., `*.pyc`) | None |
+| `--exclude-names <regexes>` | Name regexes to filter (e.g., `^_`) | None |
+| `-f, --find <items>` | Types/names (e.g., `class`, `MyClass`) | All types |
+| `--find-regex <patterns>` | Regex for types/names | None |
+| `--pattern-regex <patterns>` | Text mode regexes | None |
+| `-s, --search <specs>` | Search specs (e.g., `class Foo`) | None |
+| `--token-mode` | Enable token similarity | False |
+| `--similarity-threshold <float>` | Token match ratio (0-1) | 0.8 |
+| `--dup-threshold <float>` | Alert if dup rate > this | 0.1 |
+| `--min <int>` | Min occurrences for dup | 2 |
+| `-p, --preview` | Show snippets | False |
+| `--json` | JSON output | False |
+| `--fail` | Exit 1 on dups | False |
+| `--verbose` | Detailed logs | False |
+| `--parallel` | Concurrent processing | False |
+| `--use-multiprocessing` | Use processes (not threads) | False |
+| `--max-workers <int>` | Worker count | CPU cores |
+| `--audit` | Enable audit logging | False |
+| `--audit-log <path>` | Audit JSONL path | `.duplifinder_audit.jsonl` |
+| `--version` | Show version | N/A |
 
-### Console (human)
-Nicely formatted listing of duplicate keys (`class <Name>`, `def <Name>`, or pattern match `'<regex>'`) with occurrence counts and optional preview snippets.
+Run `duplifinder --help` for full details.
 
-Example:
+## Output Formats
+
+### Console (Rich-Enhanced)
+
+Formatted tables with counts and previews:
+
 ```
-class MyClass defined 3 time(s):
-  -> /path/to/a.py:10
-  -> /path/to/b.py:15
-  -> /path/to/c.py:8
+class MyClass (3 occurrences):
+┌─────────────────────┬──────────────────────────────────────┐
+│ Location            │ Snippet                              │
+├─────────────────────┼──────────────────────────────────────┤
+│ /src/a.py:10        │ 10 class MyClass:                    │
+│ /src/b.py:15        │ 15   def init(self):                 │
+│ /src/c.py:8         │ 8     pass                           │
+└─────────────────────┴──────────────────────────────────────┘
 ```
 
-### JSON (machine)
-JSON contains meta information and a structured duplicates object:
+No dups: `[green]No duplicates found.[/green]`
+
+Alerts: `[red]ALERT: Dup rate 15% > 10% threshold[/red]`
+
+Audit nudge (if enabled): `[dim green]Audit trail logged to ./audit.jsonl[/dim green]`
+
+### JSON (Machine-Readable)
 
 ```json
 {
-  "generated_at": "2025-11-01T05:39:50Z",
+  "generated_at": "2025-11-01T13:29:00Z",
   "root": "/path/to/repo",
   "scanned_files": 123,
   "skipped_files": ["tests/broken.py"],
-  "ignore_dirs": ["__pycache__", ".git"],
   "duplicate_count": 2,
   "duplicates": {
     "class MyClass": [
-      {"loc": "/path/to/a.py:10", "snippet": "class MyClass:\n  ...", "type": "class"}
-    ],
-    "def helper": [
-      {"loc": "/path/to/d.py:42", "snippet": "def helper(...):\n  ...", "type": "def"}
+      {"loc": "/src/a.py:10", "snippet": "class MyClass:\n  pass", "type": "class"}
     ]
   }
 }
 ```
 
-## Behavior details & implementation notes
+For search: Includes `is_singleton`, `count`, `occurrences`.
 
-- Duplifinder parses Python files using the `ast` module to reliably identify `ClassDef`, `FunctionDef`, and `AsyncFunctionDef`. Methods inside classes are reported as `ClassName.method_name`.
-- Text-pattern mode scans file lines for regex matches and collects locations.
-- Files matching configured `exclude_patterns` or whose definitions match `exclude_names` are ignored.
-- Default ignore set includes common directories: `.git`, `__pycache__`, `.venv`, `venv`, `build`, `dist`, `node_modules`.
-- Preview mode uses AST `lineno/end_lineno` to extract contiguous snippet text when available.
-- Parallelism: `--parallel` enables concurrent processing; `--use-multiprocessing` switches to `ProcessPoolExecutor` to avoid GIL-bound bottlenecks on large repos (at the cost of process spawn overhead).
+## Advanced Usage
 
-## Best practices for usage
+### Parallelism for Monorepos
 
-- Start with `--preview --min 2 --verbose` to get a human view of what is flagged
-- For CI, use `--json + --fail` to programmatically detect regressions
-- Use `--exclude-patterns` and `--exclude-names` to tune false positives (e.g., autogenerated files)
-- When scanning very large monorepos, experiment with `--max-workers` and `--use-multiprocessing` for throughput
+For 10k+ files, enable multiprocessing to bypass GIL:
 
-## Development & testing
+```bash
+duplifinder . --parallel --use-multiprocessing --max-workers 16
+```
 
-Recommended dev dependencies: `pytest`, `mypy`, `black`.
+Benchmark: ~2x speedup on CPU-bound token mode; monitor via `--verbose`.
 
-Run test suite:
+### Audit Logging (v6.1.0+)
+
+Opt-in JSONL trails for compliance (file access, skips, durations):
+
+```bash
+duplifinder . --audit --audit-log ./logs/audit.jsonl --verbose
+```
+
+Sample entry:
+```json
+{"timestamp": "2025-11-01T13:29:00Z", "event_type": "file_parsed", "path": "/src/a.py", "action": "ast_success", "bytes_read": 1024, "lines": 50}
+```
+
+Query with `jq`: `jq '.event_type == "scan_completed"' audit.jsonl` for SLOs.
+
+### CI Integration
+
+Gate merges on zero dups:
+
+```yaml
+# .github/workflows/ci.yml
+- name: Check Duplicates
+  run: duplifinder . --fail --json --min 2
+```
+
+Threshold alerts:
+```bash
+duplifinder . --dup-threshold 0.05 --fail  # Fail if >5% dup rate
+```
+
+## Best Practices
+
+- **Start Simple**: `--preview --min 2 --verbose` for initial runs; tune excludes iteratively.
+- **CI Gating**: `--json --fail` for regressions; parse output for PR comments.
+- **Monorepo Scaling**: Use `--use-multiprocessing` for token/AST; cap `--max-workers` at 2x cores.
+- **False Positive Tuning**: `--exclude-names "^test_.*"` for fixtures; `--exclude-patterns "migrations/*"`.
+- **Compliance**: Enable `--audit` in prod scans; rotate logs via cron.
+
+## Development
+
+Install dev deps:
 ```bash
 pip install -e ".[dev]"
-pytest -q
 ```
 
-Lint / format:
+Run tests:
+```bash
+pytest  # With coverage: pytest --cov=src/duplifinder --cov-fail-under=90
+```
+
+Lint/format:
 ```bash
 black .
-mypy src/duplifinder
+mypy src/duplifinder  # Strict mode
 ```
 
-To run locally as console script:
+Local run:
 ```bash
-python -m duplifinder.main
-# or, after editable install:
-duplifinder .
+duplifinder . --preview
 ```
 
-## Packaging and publishing
-
-The project uses `pyproject.toml` + `setuptools` for packaging. Ensure package metadata (version, authors, URLs) are updated before PyPI release.
-
+Build/release:
 ```bash
 python -m build
 twine upload dist/*
@@ -210,39 +298,26 @@ twine upload dist/*
 
 ## Contributing
 
-Contributions are welcome. Please:
+1. **Issue First**: Describe bug/feature with repro steps or use case.
+2. **Branch & PR**: Fork → `feat/your-feature` → PR with rationale/tests.
+3. **Standards**: Follow PEP 8 (black), type hints (mypy), 90%+ coverage.
+4. **Small Changes**: <300 LOC per PR; link ADRs for architecture.
 
-1. Open an issue describing the bug or feature
-2. Fork the repo, create a branch, and submit a pull request
-3. Follow the project's code style and add tests for new behavior
-4. Keep changes small and focused; explain rationale in PR description
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## Troubleshooting
 
-- **SyntaxError while scanning**: Duplifinder will skip files that cannot be parsed and report them in `skipped_files` (visible in verbose mode or JSON output)
-- **Encoding issues**: Ensure source files are UTF-8 or have valid Python encoding declarations
-- **False positives**: Use `--exclude-names` or `--exclude-patterns` to filter generated code or private helpers
+- **Syntax Errors**: Skipped files logged in `skipped_files` (JSON/verbose); fix or exclude.
+- **Encoding Issues**: UTF-8 assumed; add `# coding: utf-8` or use `--exclude-patterns`.
+- **High Skip Rate**: >10% triggers exit 3; tune ignores/excludes.
+- **Perf Bottlenecks**: Profile with `--max-workers=1`; switch to multiprocessing for AST/token.
+- **False Positives**: Layer `--exclude-names` regexes; test with `--preview`.
 
-## License & authors
+## License
 
-- License: MIT
-- Package version: 2.7.0 (update in `pyproject.toml` as required)
-- Author / Maintainers: See `pyproject.toml` and repository metadata
+MIT License. See [LICENSE](LICENSE) for details.
 
-## Contact & references
+---
 
-If you need help, file an issue or create a PR in the repository. The codebase referenced for this README and the CLI options comes from the current project dump.
-
-## Example: common commands summary
-
-```bash
-# Full scan, preview duplicates, human output
-duplifinder . --preview --verbose
-
-# CI-friendly: JSON output and fail on duplicates
-duplifinder . --json --fail
-
-# Text-pattern search (duplicate lines matching regex)
-duplifinder . --pattern-regex "FIXME|TODO" --min 3 --json
-```
+*Built with ❤️ for Python devs. Questions? [Open an issue](https://github.com/dhruv13x/duplifinder/issues).*
 ```

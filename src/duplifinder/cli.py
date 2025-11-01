@@ -1,13 +1,13 @@
 # src/duplifinder/cli.py
 
-"""CLI argument parsing and configuration merging."""
+"""CLI argument parsing and config building."""
 
 import argparse
 import logging
 import pathlib
 from typing import Dict
 
-from .config import Config, load_config_file
+from .config import Config, load_config_file, DEFAULT_IGNORES
 from . import __version__
 
 
@@ -27,6 +27,7 @@ def create_parser() -> argparse.ArgumentParser:
     config_group.add_argument("--ignore", default="", help="Comma-separated directory names to ignore.")
     config_group.add_argument("--exclude-patterns", default="", help="Comma-separated glob patterns for files to exclude.")
     config_group.add_argument("--exclude-names", default="", help="Comma-separated regex patterns for definition names to exclude.")
+    config_group.add_argument("--no-gitignore", action="store_true", help="Disable auto-respect of .gitignore patterns (default: respect).")
     
     # Scan Mode Groups
     scan_group = parser.add_argument_group("Scan Modes")
@@ -51,6 +52,8 @@ def create_parser() -> argparse.ArgumentParser:
     output_group.add_argument("--json", action="store_true", help="Output as JSON.")
     output_group.add_argument("--fail", action="store_true", help="Exit 1 if duplicates found.")
     output_group.add_argument("--verbose", action="store_true", help="Print detailed logs.")
+    output_group.add_argument("--audit", action="store_true", help="Enable audit logging for file access trails (JSONL).")
+    output_group.add_argument("--audit-log", type=str, help="Path for audit log output (defaults to .duplifinder_audit.jsonl).")
     output_group.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     
     return parser
@@ -80,7 +83,7 @@ def build_config(args: argparse.Namespace) -> Config:
         "exclude_patterns": {x.strip() for x in (args.exclude_patterns or config_dict.get("exclude_patterns", "")).split(",") if x.strip()},
         "exclude_names": {x.strip() for x in (args.exclude_names or config_dict.get("exclude_names", "")).split(",") if x.strip()},
         "filter_regexes": args.find_regex or config_dict.get("find_regex", []),
-        "pattern_regexes": args.pattern_regexes or config_dict.get("pattern_regex", []),
+        "pattern_regexes": args.pattern_regex or config_dict.get("pattern_regex", []),  # Fixed: singular
         "search_specs": args.search or config_dict.get("search", []),
         "search_mode": bool(args.search or config_dict.get("search", [])),
         "token_mode": args.token_mode or config_dict.get("token_mode", False),
@@ -94,6 +97,9 @@ def build_config(args: argparse.Namespace) -> Config:
         "use_multiprocessing": args.use_multiprocessing or config_dict.get("use_multiprocessing", False),
         "max_workers": args.max_workers or config_dict.get("max_workers", None),
         "preview": args.preview or config_dict.get("preview", False),
+        "audit_enabled": args.audit or config_dict.get("audit", False),
+        "audit_log_path": args.audit_log or config_dict.get("audit_log", ".duplifinder_audit.jsonl"),
+        "respect_gitignore": not getattr(args, 'no_gitignore', False) and config_dict.get("respect_gitignore", True),
     }
 
     # Process find arguments

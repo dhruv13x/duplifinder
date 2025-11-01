@@ -1,4 +1,4 @@
-# duplifinder/src/duplifinder/duplifinder/config.py
+# src/duplifinder/config.py
 
 """Configuration management with Pydantic validation."""
 
@@ -6,7 +6,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, List, Set
 
-from pydantic import BaseModel, Field, validator
+# MODIFIED: Import field_validator and ValidationInfo, remove validator
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
 import yaml
 
 DEFAULT_IGNORES = {".git", "__pycache__", ".venv", "venv", "build", "dist", "node_modules"}
@@ -37,16 +38,24 @@ class Config(BaseModel):
     use_multiprocessing: bool = False
     max_workers: int | None = Field(None, ge=1)
     preview: bool = False
+    audit_enabled: bool = Field(False, description="Enable audit logging for file access trails")
+    audit_log_path: Path = Field(
+        default_factory=lambda: Path(".duplifinder_audit.jsonl"),
+        description="Path for audit log output (JSONL format)"
+    )
+    respect_gitignore: bool = Field(True, description="Auto-respect .gitignore patterns for exclusions")
 
-    @validator("types_to_search")
-    def validate_types(cls, v):
+    # MODIFIED: Use @field_validator
+    @field_validator("types_to_search")
+    def validate_types(cls, v: Set[str]) -> Set[str]:
         invalid = v - KNOWN_TYPES
         if invalid:
             raise ValueError(f"Unsupported types: {', '.join(invalid)}. Supported: {', '.join(KNOWN_TYPES)}")
         return v
 
-    @validator("filter_regexes", "pattern_regexes", "exclude_names", pre=True)
-    def compile_regexes(cls, v):
+    # MODIFIED: Use @field_validator with mode='before' (for pre=True)
+    @field_validator("filter_regexes", "pattern_regexes", "exclude_names", mode='before')
+    def compile_regexes(cls, v: List[str]) -> List[str]:
         import re
         compiled = []
         for pat in v:
@@ -57,8 +66,9 @@ class Config(BaseModel):
                 raise ValueError(f"Invalid regex '{pat}': {e}")
         return compiled
 
-    @validator("search_specs", pre=True)
-    def validate_search_specs(cls, v):
+    # MODIFIED: Use @field_validator with mode='before' (for pre=True)
+    @field_validator("search_specs", mode='before')
+    def validate_search_specs(cls, v: List[str]) -> List[str]:
         if not v:
             return v
         import re
@@ -72,6 +82,16 @@ class Config(BaseModel):
                 raise ValueError(f"Invalid type '{typ}' in '{spec}': {', '.join(valid_types)}")
             if not name:
                 raise ValueError(f"Empty name in '{spec}'.")
+        return v
+
+    # MODIFIED: Use @field_validator and ValidationInfo to access other field data
+    @field_validator("audit_log_path")
+    def validate_audit_path(cls, v: Path, info: ValidationInfo) -> Path:
+        # Access 'values' dict via info.data
+        if info.data.get("audit_enabled") and not isinstance(v, Path):
+            v = Path(v)
+        if info.data.get("audit_enabled") and v.exists() and not v.parent.is_dir():
+            raise ValueError(f"Audit log path '{v}' parent directory does not exist")
         return v
 
 

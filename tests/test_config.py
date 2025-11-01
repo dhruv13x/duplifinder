@@ -22,7 +22,7 @@ def test_invalid_types_validation():
 def test_regex_validation():
     """Test invalid regex raises ValueError."""
     with pytest.raises(ValueError, match="Invalid regex"):
-        Config(pattern_regexes=["[unclosed")  # Invalid regex
+        Config(pattern_regexes="[unclosed]") # Invalid regex
 
 
 def test_search_specs_validation():
