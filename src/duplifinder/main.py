@@ -1,61 +1,61 @@
 # src/duplifinder/main.py
 
-"""Main entrypoint for Duplifinder."""
+"""Main entry point for Duplifinder."""
 
-import re
 import sys
-from typing import Dict, List, Tuple
+from pathlib import Path
 
-from . import cli, finder, output
+from .cli import create_parser, build_config
+from .finder import find_definitions, find_text_matches, find_token_duplicates, find_search_matches
+from .output import render_duplicates, render_search, render_search_json
 from .config import Config
 
 
-def compute_duplicates(config: Config, is_text_mode: bool) -> Tuple[Dict, List[str], int]:
-    """Compute duplicates based on mode."""
-    skipped = []
-    scanned = 0
-    duplicates = {}
-
-    if is_text_mode:
-        import re
-        text_patterns = [re.compile(rgx) for rgx in config.pattern_regexes]
-        all_matches, skipped, scanned = finder.find_text_matches(config, text_patterns)
-        duplicates = {f"pattern match '{matched}'": sorted(locs) for matched, locs in all_matches.items() if len(locs) >= config.min_occurrences}
-    else:
-        all_defs, skipped, scanned = finder.find_definitions(config)
-        duplicates = {}
-        for t, defs in all_defs.items():
-            for name, loc_snippets in defs.items():
-                if len(loc_snippets) < config.min_occurrences:
-                    continue
-                patterns = [p.split(" ", 1)[1] if " " in p else p for p in config.filter_regexes if " " not in p or p.startswith(f"{t} ")]
-                include = (not config.filter_names and not patterns) or name in config.filter_names or any(re.match(pat, name) for pat in patterns)
-                if not include:
-                    continue
-                key = f"{t} {name}" if t != "class" else f"class {name}"
-                duplicates[key] = sorted(loc_snippets, key=lambda x: x[0])
-
-    return duplicates, skipped, scanned
-
-
 def main() -> None:
-    """Main CLI execution."""
-    parser = cli.create_parser()
+    """Run the main Duplifinder workflow."""
+    parser = create_parser()
     args = parser.parse_args()
-    config_dict = cli.load_config_file(args.config) if args.config else {}
-    config = cli.build_config(args, config_dict)
-    cli.validate_config(config, parser)
 
-    is_text_mode = bool(config.pattern_regexes)
-    duplicates, skipped, scanned = compute_duplicates(config, is_text_mode)
+    try:
+        config = build_config(args)
+    except SystemExit as e:
+        sys.exit(2)  # Config error
 
-    if config.json_output:
-        output.render_json(duplicates, config, is_text_mode, scanned, skipped)
+    if config.search_mode:
+        results, skipped, scanned = find_search_matches(config)
+        if config.json_output:
+            render_search_json(results, config, scanned, skipped)
+        else:
+            render_search(results, config)
+        # Exit 1 if multiples and --fail
+        has_multi = any(len(occ) > 1 for occ in results.values())
+        sys.exit(1 if (config.fail_on_duplicates and has_multi) else 0)
+    elif config.token_mode:
+        results, skipped, scanned, total_lines, dup_lines = find_token_duplicates(config)
+        dup_rate = dup_lines / total_lines if total_lines else 0
+        if dup_rate > config.dup_threshold:
+            print(f"ALERT: Dup rate {dup_rate:.1%} > threshold {config.dup_threshold:.1%}", file=sys.stderr)
+            sys.exit(1 if config.fail_on_duplicates else 0)
+        render_duplicates(results, config, False, dup_rate, config.dup_threshold, total_lines, dup_lines)
+        sys.exit(0 if not config.fail_on_duplicates or dup_lines == 0 else 1)
+    elif config.pattern_regexes:
+        import re
+        patterns = [re.compile(p) for p in config.pattern_regexes]
+        results, skipped, scanned, total_lines, dup_lines = find_text_matches(config, patterns)
+        dup_rate = dup_lines / total_lines if total_lines else 0
+        render_duplicates(results, config, False, dup_rate, config.dup_threshold, total_lines, dup_lines)
+        sys.exit(0 if not config.fail_on_duplicates or dup_lines == 0 else 1)
     else:
-        output.render_duplicates(duplicates, config, is_text_mode)
-
-    if config.fail_on_duplicates and duplicates:
-        sys.exit(1)
+        # Default: definitions
+        results, skipped, scanned, total_lines, dup_lines = find_definitions(config)
+        dup_rate = dup_lines / total_lines if total_lines else 0
+        # Scan fail if >10% skipped (arbitrary; tunable)
+        skip_rate = len(skipped) / (scanned + len(skipped)) if scanned + len(skipped) > 0 else 0
+        if skip_rate > 0.1:
+            print(f"SCAN FAIL: {skip_rate:.1%} files skipped (>10% threshold)", file=sys.stderr)
+            sys.exit(3)  # Scan fail
+        render_duplicates(results, config, False, dup_rate, config.dup_threshold, total_lines, dup_lines)
+        sys.exit(0 if not config.fail_on_duplicates or dup_lines == 0 else 1)
 
 
 if __name__ == "__main__":

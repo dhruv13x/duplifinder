@@ -41,6 +41,19 @@ duplifinder . --fail
 
 # Output machine-readable JSON
 duplifinder . --json > duplicates.json
+
+# Token-based near-duplicates (e.g., similar function bodies)
+duplifinder . --token-mode --similarity-threshold 0.85 --preview
+
+# Scan with metrics and alert if >10% dup
+duplifinder . --json --dup-threshold 0.1
+
+# Search all occurrences of a class (singleton or multi)
+duplifinder . -s class UIManager --preview
+
+# Multiple specs
+duplifinder . -s class UIManager -s def dashboard_menu --json
+
 ```
 
 Text-pattern mode (find duplicated text by regex):
@@ -107,6 +120,10 @@ preview: true
 | `--use-multiprocessing` | Use multiprocessing (ProcessPool) instead of threads |
 | `--max-workers` | Max workers when parallel processing is enabled |
 | `--version` | Print program version |
+| --token-mode | Enable token-based detection for non-definition code blocks |
+| --similarity-threshold <float> | Similarity ratio for token dups (0.0-1.0, default: 0.8) |
+| --dup-threshold <float> | Duplication rate threshold for alerts (0.0-1.0, default: 0.1) |
+| -s, --search <specs> | Search all occurrences of specific definitions (e.g., 'class UIManager'); lists even singles. Requires 'type name'. |
 
 ## Output formats
 
