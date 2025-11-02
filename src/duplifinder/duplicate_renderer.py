@@ -90,19 +90,24 @@ def render_duplicates(
                     )
                     # Print the Syntax object inside the Panel
                     console.print(Panel(syntax, border_style="dim", padding=(0, 1)))
-                    
-    else:
-        # NO-PREVIEW MODE: Use the new, compact table format
-        # THIS BLOCK RUNS IF YOU *DO NOT* USE -p
-        for key, items in duplicates.items():
-            table = Table(title=f"{key} ({len(items)} occurrence(s)):")
-            table.add_column("Location")
-            # We don't add the "Snippet" column at all
-            for item in items:
-                table.add_row(item["loc"])  # Only add location
-            console.print(table)
                    
-
+    else:
+     
+        # NO-PREVIEW MODE: Use the new, *colorful* compact table format
+        for key, items in duplicates.items():
+            # Add color to the title
+            title = f"[bold magenta]{key}[/bold magenta] ([bold yellow]{len(items)}[/bold yellow] occurrence(s)):"
+            
+            # Add color and style to the table
+            table = Table(title=title, border_style="blue")
+            
+            # Add color to the header
+            table.add_column("Location", style="cyan")
+            
+            for item in items:
+                table.add_row(item["loc"])  # Add location
+            console.print(table)
+        
     if not duplicates:
         console.print("[green]No duplicates found.[/green]")
 

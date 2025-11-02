@@ -107,7 +107,7 @@ def discover_py_files(config: Config) -> List[Path]:
         mime, _ = mimetypes.guess_type(str(p))
         if mime != "text/x-python":
             audit_log_event(config, "file_skipped", path=str(p), reason=f"MIME {mime}")
-            logging.warning(f"Skipping non-Py file '{p}': MIME {mime}")
+            logging.info(f"Skipping non-Py file '{p}': MIME {mime}")
             continue
 
         # Quick content check (first 1024 bytes)
@@ -116,7 +116,7 @@ def discover_py_files(config: Config) -> List[Path]:
                 header = f.read(1024)
                 if not (header.startswith(b"#!") or b"def " in header or b"class " in header):
                     audit_log_event(config, "file_skipped", path=str(p), reason="No Python markers")
-                    logging.warning(f"Skipping non-Py content '{p}': No Python markers")
+                    logging.info(f"Skipping non-Py content '{p}': No Python markers")
                     continue
         except Exception:
             audit_log_event(config, "file_skipped", path=str(p), reason="header_read_failed")
