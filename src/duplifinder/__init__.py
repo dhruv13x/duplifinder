@@ -2,7 +2,7 @@
 
 """Duplifinder: Detect duplicate Python definitions across projects."""
 
-__version__ = "6.0.2"
+__version__ = "6.0.3"
 
 from . import main  # For entrypoint
 from .config import Config
