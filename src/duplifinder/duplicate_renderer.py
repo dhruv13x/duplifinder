@@ -9,6 +9,8 @@ from typing import Dict, List, Tuple, Any
 
 from rich.console import Console
 from rich.table import Table
+from rich.panel import Panel
+from rich.syntax import Syntax
 
 from .config import Config
 
@@ -43,8 +45,8 @@ def render_duplicates(
     threshold: float,
     total_lines: int,
     dup_lines: int,
-    scanned_files: int,        # <-- MODIFIED: Added parameter
-    skipped_files: List[str],  # <-- MODIFIED: Added parameter
+    scanned_files: int,
+    skipped_files: List[str],
     is_token: bool = False
 ) -> None:
     """Render duplicates to console or JSON; handles token normalization."""
@@ -56,21 +58,50 @@ def render_duplicates(
         out = {
             "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "root": str(config.root),
-            "scanned_files": scanned_files,  # <-- MODIFIED: Used parameter
-            "skipped_files": skipped_files,  # <-- MODIFIED: Used parameter
+            "scanned_files": scanned_files,
+            "skipped_files": skipped_files,
             "duplicate_count": len(duplicates),
             "duplicates": duplicates  # Already normalized
         }
         print(json.dumps(out, indent=2))
         return
 
-    for key, items in duplicates.items():
-        table = Table(title=f"{key} ({len(items)} occurrence(s)):")
-        table.add_column("Location")
-        table.add_column("Snippet" if config.preview else "")
-        for item in items:
-            table.add_row(item["loc"], item["snippet"][:100] + "..." if config.preview and item["snippet"] else "")
-        console.print(table)
+    if config.preview:
+        # PREVIEW MODE: Use list format with Syntax Highlighting
+        for key, items in duplicates.items():
+            # Print a colorful title for the definition
+            console.print(f"\n[bold magenta]{key}[/bold magenta] defined [bold yellow]{len(items)} time(s):[/bold yellow]")
+            for item in items:
+                loc = item["loc"]
+                snippet = item["snippet"]
+                # Print the location
+                console.print(f"  -> [cyan]{loc}[/cyan]")
+                
+                if snippet:
+                    # Create a Syntax object for highlighting
+                    # We use "python" as the lexer
+                    # We use a theme (like "monokai") to get the background color
+                    # We disable rich's line numbers because the snippet already has them
+                    syntax = Syntax(
+                        snippet,
+                        "python",
+                        theme="monokai",
+                        line_numbers=False 
+                    )
+                    # Print the Syntax object inside the Panel
+                    console.print(Panel(syntax, border_style="dim", padding=(0, 1)))
+                    
+    else:
+        # NO-PREVIEW MODE: Use the new, compact table format
+        # THIS BLOCK RUNS IF YOU *DO NOT* USE -p
+        for key, items in duplicates.items():
+            table = Table(title=f"{key} ({len(items)} occurrence(s)):")
+            table.add_column("Location")
+            # We don't add the "Snippet" column at all
+            for item in items:
+                table.add_row(item["loc"])  # Only add location
+            console.print(table)
+                   
 
     if not duplicates:
         console.print("[green]No duplicates found.[/green]")

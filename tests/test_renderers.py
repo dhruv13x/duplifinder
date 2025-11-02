@@ -105,3 +105,97 @@ def test_render_search_multiple_occurrences(capsys, mock_config):
     assert "a.py:1" in captured.out
     assert "b.py:2" in captured.out
 
+
+def test_render_duplicates_preview_token_mode(capsys, mock_config):
+    """Test that preview mode works with is_token=True (Lines 29-30)."""
+    mock_config.preview = True
+    
+    token_results = {"token similarity >80%": [
+        ("file:1:2", "file:3:4", 0.85),
+        ("file:5:6", "file:7:8", 0.88)
+    ]}
+    
+    with patch("duplifinder.duplicate_renderer.Panel") as mock_panel, \
+         patch("duplifinder.duplicate_renderer.Syntax") as mock_syntax:
+        
+        render_duplicates(token_results, mock_config, False, 0.0, 0.1, 10, 0, 1, [], is_token=True)
+    
+    captured = capsys.readouterr()
+    
+    mock_syntax.assert_not_called()
+    mock_panel.assert_not_called() # Tokens don't have snippets, so panel isn't called
+    
+    assert "token similarity >80%" in captured.out
+    assert "file:1:2" in captured.out
+    assert "┏" not in captured.out # No table chars
+
+def test_render_duplicates_audit_nudge(capsys, mock_config):
+    """Test that the audit nudge is printed (Line 114)."""
+    mock_config.audit_enabled = True
+    mock_config.audit_log_path = "fake/audit.jsonl"
+    mock_config.preview = False # Use table mode
+    
+    render_duplicates({}, mock_config, False, 0.0, 0.1, 10, 0, 1, [], is_token=False)
+    
+    captured = capsys.readouterr()
+    assert "Audit trail logged to fake/audit.jsonl" in captured.out
+
+def test_render_duplicates_fail_on_duplicates(mock_config):
+    """Test SystemExit is raised (Line 117)."""
+    mock_config.fail_on_duplicates = True
+    mock_config.preview = False # Use table mode
+    dups = {"def MyFunc": [("a.py:1", ""), ("b.py:2", "")]} # Has duplicates
+    
+    with pytest.raises(SystemExit) as e:
+        render_duplicates(dups, mock_config, False, 0.0, 0.1, 10, 2, 2, [], is_token=False)
+    
+    assert e.value.code == 1
+
+
+def test_render_duplicates_preview_mode(capsys, mock_config):
+    """Test that preview mode uses panels (Lines 71-92)."""
+    mock_config.preview = True
+    
+    # ** THE FIX: Provide two items to pass the min_occurrences=2 filter **
+    dups = {"def MyFunc": [("a.py:1", "snippet1"), ("b.py:2", "snippet2")]}
+    
+    with patch("duplifinder.duplicate_renderer.Panel") as mock_panel, \
+         patch("duplifinder.duplicate_renderer.Syntax") as mock_syntax:
+        
+        render_duplicates(dups, mock_config, False, 0.0, 0.1, 10, 1, 1, [], is_token=False)
+    
+    captured = capsys.readouterr()
+    
+    # Assert the panel/syntax was called (it will be called twice)
+    assert mock_syntax.call_count == 2
+    assert mock_panel.call_count == 2
+    
+    # Assert the output text is correct (no table)
+    assert "def MyFunc" in captured.out
+    assert "a.py:1" in captured.out
+    assert "b.py:2" in captured.out
+    assert "┏" not in captured.out # No table chars
+
+
+
+def test_render_duplicates_preview_mode_no_snippet(capsys, mock_config):
+    """Test preview mode when an item has no snippet (Line 80 branch)."""
+    mock_config.preview = True
+
+    # ** THE FIX: Provide two items to pass the min_occurrences=2 filter **
+    dups = {"text TODO": [("a.py:1", ""), ("b.py:2", "")]} # Two items, empty snippets
+    
+    with patch("duplifinder.duplicate_renderer.Panel") as mock_panel, \
+         patch("duplifinder.duplicate_renderer.Syntax") as mock_syntax:
+        
+        render_duplicates(dups, mock_config, False, 0.0, 0.1, 10, 1, 1, [], is_token=False)
+    
+    captured = capsys.readouterr()
+    
+    # It should print the location but not call Syntax or Panel
+    mock_syntax.assert_not_called()
+    mock_panel.assert_not_called()
+    assert "text TODO" in captured.out
+    assert "a.py:1" in captured.out
+    assert "b.py:2" in captured.out
+    assert "No duplicates found" not in captured.out

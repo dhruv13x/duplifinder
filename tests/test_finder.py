@@ -3,6 +3,7 @@
 import json
 from unittest.mock import patch, Mock  # <-- Import Mock
 from pathlib import Path  # <-- FIXED: Added missing import
+import logging  # <-- ** FIX 1: ADD THIS IMPORT **
 
 import pytest
 from duplifinder.duplicate_renderer import render_duplicates
@@ -54,13 +55,13 @@ def test_render_search_json(capsys, mock_config):
     """Test JSON search output."""
     mock_config.root = Path(".")
     results = {"class Foo": [("file.py:1", "snippet")]}
-    
+
     # Call the function, which prints to stdout
     render_search_json(results, mock_config, 1, [])
-    
+
     # Get captured output from capsys
     output = capsys.readouterr().out
-    
+
     parsed = json.loads(output)
     assert parsed["search_results"]["class Foo"]["is_singleton"] is True
 
@@ -68,35 +69,36 @@ def test_render_search_json(capsys, mock_config):
 def test_render_duplicates_token_mode(capsys, mock_config):
     """Test token rendering normalization."""
     mock_config.json_output = False
-    
-    # FIXED: 
+
+    # FIXED:
     # 1. Provided two items to pass min_occurrences=2.
     # 2. Used the correct (loc1, loc2, ratio) tuple format.
     token_results = {"token similarity >80%": [
-        ("file:1:2", "file:3:4", 0.85), 
+        ("file:1:2", "file:3:4", 0.85),
         ("file:5:6", "file:7:8", 0.88)
     ]}
-    
+
     # FIXED: Added missing arguments: scanned_files=0, skipped_files=[]
     render_duplicates(token_results, mock_config, False, 0.0, 0.1, 10, 0, 0, [], is_token=True)
-    
+
     captured = capsys.readouterr()
-    
+
     # FIXED: Assert the correct format and check that "No duplicates" is not present
     assert "(sim: 85.00%)" in captured.out
     assert "(sim: 88.00%)" in captured.out
     assert "No duplicates found" not in captured.out
-    
+
 
 
 def test_find_text_matches(mock_config: Config, caplog):
     """Test the find_text_matches function's core logic."""
     mock_config.verbose = True
+    caplog.set_level(logging.INFO)  # <-- ** FIX 2: ADD THIS LINE **
     patterns = [re.compile("TODO")]
-    
+
     # Mock the dependencies
     mock_discover = patch("duplifinder.text_finder.discover_py_files", return_value=[Path("a.py")])
-    
+
     # Mock the result from the parallel runner
     mock_run_parallel = patch(
         "duplifinder.text_finder.run_parallel",
@@ -119,10 +121,11 @@ def test_find_text_matches(mock_config: Config, caplog):
 def test_find_definitions(mock_config: Config, caplog):
     """Test the find_definitions function's core logic."""
     mock_config.verbose = True
-    
+    caplog.set_level(logging.INFO)  # <-- ** FIX 3: ADD THIS LINE **
+
     # Mock the dependencies
     mock_discover = patch("duplifinder.definition_finder.discover_py_files", return_value=[Path("a.py")])
-    
+
     # Mock the result from the parallel runner
     mock_run_parallel = patch(
         "duplifinder.definition_finder.run_parallel",
@@ -146,11 +149,12 @@ def test_find_definitions(mock_config: Config, caplog):
 def test_find_search_matches(mock_config: Config, caplog):
     """Test the find_search_matches function's core logic."""
     mock_config.verbose = True
+    caplog.set_level(logging.INFO)  # <-- ** FIX 4: ADD THIS LINE **
     mock_config.search_specs = ["class MyClass"]
-    
+
     # Mock the dependencies
     mock_discover = patch("duplifinder.search_finder.discover_py_files", return_value=[Path("a.py")])
-    
+
     # Mock the result from the parallel runner
     mock_run_parallel = patch(
         "duplifinder.search_finder.run_parallel",
@@ -172,10 +176,11 @@ def test_find_search_matches(mock_config: Config, caplog):
 def test_find_token_duplicates(mock_config: Config, caplog):
     """Test the find_token_duplicates function's core logic."""
     mock_config.verbose = True
-    
+    caplog.set_level(logging.INFO)  # <-- ** FIX 5: ADD THIS LINE **
+
     # Mock the dependencies
     mock_discover = patch("duplifinder.token_finder.discover_py_files", return_value=[Path("a.py")])
-    
+
     # Mock the result from the parallel runner
     mock_run_parallel = patch(
         "duplifinder.token_finder.run_parallel",

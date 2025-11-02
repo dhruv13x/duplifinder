@@ -2,6 +2,9 @@
 requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.dynamic]
+version = {attr = "duplifinder.__version__"}
+
 [project]
 name = "duplifinder"
 dynamic = ["version"]  # Enable dynamic versioning via __version__.py or setuptools_scm

@@ -1,6 +1,3 @@
-    
-    
-    
 """Tests for processors with edges."""
 
 import re
@@ -101,14 +98,14 @@ def test_process_file_ast_preview_indent(tmp_path: Path, mock_config: Config):
     """Test AST snippet generation with indentation."""
     py_file = tmp_path / "test.py"
     # FIXED: File content must be valid Python (no leading indent)
-    py_file.write_text("class A:\n    pass\n") 
+    py_file.write_text("class A:\n    pass\n")
     mock_config.preview = True
 
     defs, _, _ = process_file_ast(py_file, mock_config)
 
     assert "class" in defs
     snippet = defs["class"]["A"][0][1]
-    
+
     # The common indent is 0, so the snippet is unchanged
     assert "1 class A:" in snippet
     assert "2     pass" in snippet # 4 spaces
@@ -140,6 +137,7 @@ def test_process_file_ast_generic_error(tmp_path: Path, mock_config: Config, cap
 
 def test_process_file_text_exclude(tmp_path: Path, mock_config: Config, caplog):
     """Test text processor respects exclude_patterns."""
+    caplog.set_level(logging.INFO)  # <-- ** FIX 1: ADD THIS LINE **
     mock_config.exclude_patterns = {"test.py"}
     mock_config.verbose = True
     py_file = tmp_path / "test.py"
@@ -181,6 +179,7 @@ def test_tokenize_block_token_error():
 
 def test_process_file_tokens_exclude(tmp_path: Path, mock_config: Config, caplog):
     """Test token processor respects exclude_patterns."""
+    caplog.set_level(logging.INFO)  # <-- ** FIX 2: ADD THIS LINE **
     mock_config.exclude_patterns = {"test.py"}
     mock_config.verbose = True
     py_file = tmp_path / "test.py"
@@ -213,4 +212,3 @@ def test_process_file_tokens_generic_error(tmp_path: Path, mock_config: Config, 
     assert skipped == str(py_file)
     # FIXED: IOError is OSError
     assert "OSError: Disk full" in caplog.text
-

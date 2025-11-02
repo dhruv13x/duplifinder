@@ -8,6 +8,8 @@ import time
 from typing import Dict, List, Tuple
 
 from rich.console import Console
+from rich.panel import Panel
+from rich.syntax import Syntax
 
 from .config import Config
 
@@ -18,24 +20,38 @@ def render_search(
 ) -> None:
     """Render search results to console."""
     console = Console()
+
     for spec, occ in search_results.items():
         count = len(occ)
         if count == 0:
             console.print(f"[yellow]No occurrences found for {spec}.[/yellow]")
             continue
-        if count == 1 and not config.fail_on_duplicates:
-            console.print(f"[green]Verified singleton: {spec} at {occ[0][0]}.[/green]")
-        else:
-            console.print(f"[blue]{spec} found {count} time(s):[/blue]")
-            for loc, snippet in occ:
-                console.print(f"  -> {loc}")
-                if config.preview and snippet:
-                    console.print(f"     {snippet[:80]}...")
+
+        # Print the main title
+        title_color = "green" if count == 1 else "blue"
+        count_color = "green" if count == 1 else "bold yellow"
+        title_text = "Verified singleton" if count == 1 else f"found {count} time(s)"
+        
+        console.print(f"\n[{title_color}]{spec}[/{title_color}] {title_text}:")
+
+        for loc, snippet in occ:
+            # Print the location
+            console.print(f"  -> [cyan]{loc}[/cyan]")
+            
+            # If -p is used, show the full, highlighted panel
+            if config.preview and snippet:
+                syntax = Syntax(
+                    snippet,
+                    "python",
+                    theme="monokai",
+                    line_numbers=False
+                )
+                console.print(Panel(syntax, border_style="dim", padding=(0, 1)))
 
         if config.fail_on_duplicates and count > 1:
             logging.warning(f"Multiple occurrences ({count}) for {spec}; failing per config.")
+            # Note: This SystemExit will be caught by main.py
             raise SystemExit(1)
-
 
 def render_search_json(
     search_results: Dict[str, List[Tuple[str, str]]],

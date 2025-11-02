@@ -49,9 +49,13 @@ def test_render_search_json(capsys):
 
 def test_render_duplicates_with_metrics(capsys):
     """Test dup rate alert."""
-    # FIXED: Added audit_enabled=False
-    config = Mock(spec=Config, dup_threshold=0.1, json_output=False, fail_on_duplicates=False, audit_enabled=False)
+    
+    # ** THE FIX IS HERE: Added preview=False **
+    config = Mock(spec=Config, dup_threshold=0.1, json_output=False, fail_on_duplicates=False, audit_enabled=False, preview=False)
+    
     # FIXED: Added missing arguments: scanned_files=0, skipped_files=[]
     render_duplicates({}, config, False, 0.15, 0.1, 100, 15, 0, [])
     captured = capsys.readouterr()
+    
+    # ** ADDED THIS ASSERT (it was missing from your file copy) **
     assert 'ALERT: Duplication rate' in captured.out
