@@ -129,7 +129,8 @@ addopts = [
   "--cov",
   "--cov-report=term-missing",
   "--cov-report=html",
-  "--cov-report=term-missing:skip-covered"
+  "--cov-report=term-missing:skip-covered",
+  "--cov-report=xml"  # <-- ADD THIS LINE
 ]
 markers = [
     "slow: Marks slow tests (use -m 'not slow')",
