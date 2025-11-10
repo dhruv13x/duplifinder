@@ -2,12 +2,10 @@
 requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-package-dir = {"" = "src"}
-
 [tool.setuptools.dynamic]
 version = {attr = "duplifinder.__version__"}
 
+# This is the only section you need to find packages in 'src'
 [tool.setuptools.packages.find]
 where = ["src"]
 
