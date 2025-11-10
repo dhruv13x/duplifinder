@@ -1,3 +1,5 @@
+# tests/test_processors.py
+
 """Tests for processors with edges."""
 
 import re

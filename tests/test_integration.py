@@ -1,3 +1,5 @@
+# tests/test_integration.py
+
 """End-to-end integration tests."""
 
 from unittest.mock import patch, Mock

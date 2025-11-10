@@ -127,14 +127,14 @@ def test_log_file_count(caplog, mock_config: Config):
         log_file_count([Path("a.py")], mock_config, "testing")
 
     assert "Found 1 Python files to testing" in caplog.text
-    
-    
+
+
 def test_audit_log_event_write_error(audit_config: Config, caplog):
     """Test that audit log write failures are warned."""
     # Patch open to fail
     with patch("builtins.open", side_effect=IOError("Permission denied")):
         audit_log_event(audit_config, "test_event")
-    
+
     assert "Audit log write failed: Permission denied" in caplog.text
 
 def test_parse_gitignore_read_error(tmp_path: Path, audit_config: Config, caplog):
@@ -142,10 +142,10 @@ def test_parse_gitignore_read_error(tmp_path: Path, audit_config: Config, caplog
     gitignore = tmp_path / ".gitignore"
     gitignore.write_text("*.log")
     audit_config.root = tmp_path
-    
+
     with patch("builtins.open", side_effect=IOError("Cannot read")):
         patterns = _parse_gitignore(gitignore, audit_config)
-    
+
     assert patterns == []
     assert "Failed to parse .gitignore" in caplog.text
 
@@ -154,10 +154,12 @@ def test_discover_py_files_non_python_mime(tmp_path: Path, mock_config: Config, 
     """Test discover_py_files skips non-python mime types."""
     mock_config.root = tmp_path
     (tmp_path / "test.py").write_text("pass")
-    
-    with patch("mimetypes.guess_type", return_value=("text/plain", None)):
+
+    # ** THE FIX IS HERE: Set caplog level to INFO **
+    with patch("mimetypes.guess_type", return_value=("text/plain", None)), \
+         caplog.at_level(logging.INFO):
         files = discover_py_files(mock_config)
-    
+
     assert "MIME text/plain" in caplog.text
     assert len(files) == 0
 
@@ -165,14 +167,16 @@ def test_discover_py_files_no_markers(tmp_path: Path, mock_config: Config, caplo
     """Test discover_py_files skips .py files with no Python markers."""
     mock_config.root = tmp_path
     (tmp_path / "test.py").write_text("just some text") # No 'def' or 'class'
-    
-    with patch("mimetypes.guess_type", return_value=("text/x-python", None)):
+
+    # ** THE FIX IS HERE: Set caplog level to INFO **
+    with patch("mimetypes.guess_type", return_value=("text/x-python", None)), \
+         caplog.at_level(logging.INFO):
         files = discover_py_files(mock_config)
-    
+
     assert "No Python markers" in caplog.text
     assert len(files) == 0
-    
-    
+
+
 def test_run_parallel_multiprocessing(mock_config: Config):
     """Test run_parallel with ProcessPoolExecutor."""
     mock_config.parallel = True
@@ -194,8 +198,8 @@ def test_run_parallel_multiprocessing(mock_config: Config):
         results = list(run_parallel(items, process_fn, config=mock_config))
 
     assert results == ["processed", "processed"]
- 
-      
+
+
 
 def test_matches_gitignore_negation(mock_config: Config):
     """Test .gitignore negation logic."""
@@ -249,5 +253,3 @@ def test_discover_py_files_read_header_error(tmp_path: Path, audit_config, caplo
     log_content = audit_config.audit_log_path.read_text()
     assert "header_read_failed" in log_content
     assert len(files) == 0  # File is skipped
-
-    audit_config.respect_gitignore = True  # Reset

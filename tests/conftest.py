@@ -1,3 +1,5 @@
+# tests/conftest.py
+
 """Pytest fixtures for Duplifinder."""
 
 import sys

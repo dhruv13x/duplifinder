@@ -1,3 +1,5 @@
+# tests/test_main.py
+
 """Integration tests for main flows with exits."""
 
 from unittest.mock import patch, Mock

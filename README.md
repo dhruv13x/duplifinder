@@ -1,11 +1,12 @@
-```markdown
+# Duplifinder
+
 [![PyPI version](https://badge.fury.io/py/duplifinder.svg)](https://badge.fury.io/py/duplifinder)
 [![PyPI downloads](https://img.shields.io/pypi/dm/duplifinder.svg)](https://pypistats.org/packages/duplifinder)
 [![Test Coverage](https://img.shields.io/badge/coverage-90%25%2B-brightgreen.svg)](https://github.com/dhruv13x/duplifinder/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python Versions](https://img.shields.io/pypi/pyversions/duplifinder.svg)](https://pypi.org/project/duplifinder/)
-
-# Duplifinder
+[![CI](https://github.com/dhruv13x/duplifinder/actions/workflows/publish.yml/badge.svg)](https://github.com/dhruv13x/duplifinder/actions/workflows/publish.yml)
+[![Codecov](https://codecov.io/gh/dhruv13x/duplifinder/graph/badge.svg)](https://codecov.io/gh/dhruv13x/duplifinder)
 
 **Detect and refactor duplicate Python code**—classes, functions, async defs, text patterns, and token similarities—for cleaner, more maintainable codebases.
 

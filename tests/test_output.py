@@ -1,3 +1,5 @@
+# tests/test_output.py
+
 """Tests for output rendering."""
 
 from unittest.mock import patch, Mock

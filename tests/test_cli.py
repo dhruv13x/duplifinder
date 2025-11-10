@@ -1,3 +1,5 @@
+# tests/test_cli.py
+
 """Tests for CLI parsing and config building."""
 
 import argparse
