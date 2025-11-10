@@ -2,14 +2,14 @@
 requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+package-dir = {"" = "src"}
+
 [tool.setuptools.dynamic]
 version = {attr = "duplifinder.__version__"}
 
-# --- THIS IS THE FIX ---
-# Tell setuptools to look for packages inside the 'src' directory.
 [tool.setuptools.packages.find]
 where = ["src"]
-# ---------------------
 
 [project]
 name = "duplifinder"
