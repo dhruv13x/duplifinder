@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from src.duplifinder.config import Config
+from duplifinder.config import Config
 from duplifinder.utils import discover_py_files
 
 
