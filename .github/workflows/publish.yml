@@ -24,19 +24,18 @@ jobs:
         with:
           python-version: "3.12"
 
- 
-      - name: 🔍 Smoke test import
-        run: python -c "from duplifinder.config import Config; print('Import successful')"
- 
       - name: 📦 Install build and test tools
         run: |
           python -m pip install --upgrade pip
           # Install in editable mode: deps + source link for accurate coverage
           pip install -e .[dev]
 
+      # 🔍 Smoke test: Validate post-install importability
+      - name: 🔍 Smoke test import
+        run: python -c "from duplifinder.config import Config; print('Import successful')"
+
       # 🧪 Run tests and check coverage
       - name: 🧪 Run tests & generate coverage
-        # Remove PYTHONPATH: editable install handles path resolution
         run: pytest
 
       # 📊 Upload coverage to Codecov
