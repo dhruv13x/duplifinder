@@ -46,7 +46,7 @@ jobs:
 
       - name: 🧪 Run tests + coverage
         working-directory: ${{ github.workspace }}
-        run: pytest --maxfail=1 --disable-warnings -q
+        run: PYTHONPATH=src pytest --maxfail=1 --disable-warnings -q
 
       - name: ⚙️ Build distribution packages
         if: matrix.python-version == '3.12'
