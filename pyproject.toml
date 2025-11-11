@@ -1,6 +1,7 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
+requires = ["setuptools>=70.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
+
 
 [tool.setuptools.dynamic]
 version = {attr = "duplifinder.__version__"}
