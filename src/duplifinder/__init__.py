@@ -1,11 +1,18 @@
-# src/duplifinder/__init__.py
-
 """Duplifinder: Detect duplicate Python definitions across projects."""
 
-__version__ = "7.0.0"
+from .__version__ import __version__
 
-from . import main  # For entrypoint
-from .config import Config
-from .ast_visitor import EnhancedDefinitionVisitor
+# Lazy attribute loading to avoid import errors during build
+def __getattr__(name):
+    if name == "Config":
+        from .config import Config
+        return Config
+    if name == "EnhancedDefinitionVisitor":
+        from .ast_visitor import EnhancedDefinitionVisitor
+        return EnhancedDefinitionVisitor
+    if name == "main":
+        from . import main
+        return main
+    raise AttributeError(name)
 
-__all__ = ["Config", "EnhancedDefinitionVisitor", "main"]
+__all__ = ["__version__", "Config", "EnhancedDefinitionVisitor", "main"]

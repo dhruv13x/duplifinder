@@ -2,27 +2,27 @@
 requires = ["setuptools>=70.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-
 [tool.setuptools.dynamic]
 version = {attr = "duplifinder.__version__"}
 
-# This is the only section you need to find packages in 'src'
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [project]
 name = "duplifinder"
-dynamic = ["version"]  # Enable dynamic versioning via __version__.py or setuptools_scm
+dynamic = ["version"]
 description = "Detect duplicate Python definitions, text patterns, and token similarities for codebase maintainability."
 readme = "README.md"
 requires-python = ">=3.12"
 license = {text = "MIT"}
+
 authors = [
     {name = "Dhruv", email = "dhruv13x@gmail.com"}
 ]
 maintainers = [
     {name = "Dhruv", email = "dhruv13x@gmail.com"}
 ]
+
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
@@ -35,7 +35,16 @@ classifiers = [
     "Programming Language :: Python :: 3 :: Only",
     "Typing :: Typed"
 ]
-keywords = ["code-duplicates", "python-ast", "refactoring", "code-analysis", "static-analysis", "ci-cd"]
+
+keywords = [
+    "code-duplicates",
+    "python-ast",
+    "refactoring",
+    "code-analysis",
+    "static-analysis",
+    "ci-cd"
+]
+
 dependencies = [
     "pyyaml>=6.0",
     "rich>=13.0",
@@ -46,30 +55,26 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pytest>=8.0.0",
-  "ruff>=0.6.0",
-  "black>=24.3.0",
-  "mypy>=1.11.0",
-  "coverage>=7.5.0",
   "pytest-cov",
   "hypothesis>=6.100.0",
   "pytest-asyncio>=0.21.0",
   "pytest-mock>=3.10.0",
   "pytest-timeout>=2.3.0",
+
+  "ruff>=0.6.0",
+  "black>=24.3.0",
+  "mypy>=1.11.0",
   "types-PyYAML>=6.0.1",
+
   "trio>=0.25.0",
-  # Add these CI tools
+
   "build",
-  "twine",
-  "codecov"
+  "twine"
 ]
 
 docs = [
     "sphinx>=7.0",
     "sphinx-rtd-theme>=2.0"
-]
-test = [
-    "pytest>=8.0",
-    "pytest-cov>=5.0"
 ]
 
 [project.urls]
@@ -98,7 +103,7 @@ exclude = '''
   | buck-out
   | build
   | dist
-  | node_modules/.* # Exclude node_modules as it's a JS thing
+  | node_modules/.*
 )/
 '''
 
@@ -122,9 +127,10 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-pythonpath = ["src"]  # Auto-prepend src for package imports
+pythonpath = ["src"]
 timeout = 10
 testpaths = ["tests"]
+
 addopts = [
   "-ra",
   "--strict-config",
@@ -132,20 +138,21 @@ addopts = [
   "-v",
   "--tb=short",
   "--durations=10",
-  "--import-mode=importlib",  # Avoid sys.path conflicts in src-layout
+  "--import-mode=importlib",
   "--cov=src/duplifinder",
   "--cov-fail-under=90",
-  "-m not slow",
-  "--cov",
+  "-m", "not slow",
   "--cov-report=term-missing",
   "--cov-report=html",
   "--cov-report=term-missing:skip-covered",
   "--cov-report=xml"
 ]
+
 markers = [
-    "slow: Marks slow tests (use -m 'not slow')",
-    "integration: Marks integration tests requiring external services",
+    "slow: Marks slow tests",
+    "integration: Marks integration tests requiring external services"
 ]
+
 filterwarnings = [
-    "ignore::DeprecationWarning:.*asyncio",
+    "ignore::DeprecationWarning:.*asyncio"
 ]
