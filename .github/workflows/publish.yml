@@ -40,8 +40,7 @@ jobs:
 
       - name: 🧪 Run tests + coverage
         run: |
-          cd duplifinder
-          pytest --maxfail=1 --disable-warnings -q
+          pytest --cov=src/duplifinder --cov-report=xml --cov-report=html
 
       - name: 📈 Show coverage %
         run: |
@@ -58,13 +57,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: htmlcov-${{ matrix.python-version }}
-          path: duplifinder/htmlcov/
+          path: htmlcov/
 
       - name: 📊 Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./duplifinder/coverage.xml
+          files: ./coverage.xml
           verbose: true
           fail_ci_if_error: true
 
