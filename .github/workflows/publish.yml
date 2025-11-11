@@ -27,17 +27,19 @@ jobs:
       - name: 📦 Install build and test tools
         run: |
           python -m pip install --upgrade pip
-          # Install in editable mode: deps + source link for accurate coverage
-          pip install -e .[dev]
+          # Non-editable install: deps + built package for CI stability; source exec via PYTHONPATH
+          pip install .[dev]
 
       # 🔍 Smoke test: Validate post-install importability
       - name: 🔍 Smoke test import
+        env:
+          PYTHONPATH: ${{ github.workspace }}  # Prepend root for src-layout resolution
         run: python -c "from duplifinder.config import Config; print('Import successful')"
 
       # 🧪 Run tests and check coverage
       - name: 🧪 Run tests & generate coverage
         env:
-          PYTHONPATH: ${{ github.workspace }}  # Prepend repo root for editable src-layout resolution in Python 3.12
+          PYTHONPATH: ${{ github.workspace }}  # Prepend root for src-layout resolution
         run: pytest
 
       # 📊 Upload coverage to Codecov
