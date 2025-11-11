@@ -40,6 +40,9 @@ jobs:
       - name: 🔍 Smoke test import
         run: python -c "from duplifinder.config import Config; print('Import successful')"
 
+      - name: ✅ Fix Python path
+        run: echo "PYTHONPATH=$PWD/src" >> $GITHUB_ENV
+
       - name: 🧪 Run tests + coverage
         run: pytest --maxfail=1 --disable-warnings -q
 
