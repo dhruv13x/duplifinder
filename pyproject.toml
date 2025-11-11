@@ -119,9 +119,10 @@ exclude = ["^tests/.*", "^build/.*", "^dist/.*"]
 module = ["rich.*", "tqdm.*"]
 ignore_missing_imports = true
 
+
 [tool.pytest.ini_options]
 minversion = "8.0"
-pythonpath = "src"
+# Removed: pythonpath = "src"  # Handled by editable install in CI/local dev
 timeout = 10
 testpaths = ["tests"]
 addopts = [
