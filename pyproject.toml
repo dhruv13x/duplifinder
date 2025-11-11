@@ -3,7 +3,10 @@ requires = ["setuptools>=70.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
-version = {attr = "duplifinder.__version__"}
+version = {attr = "duplifinder.__version__.__version__"}
+
+[tool.setuptools]
+package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -130,7 +133,6 @@ minversion = "8.0"
 pythonpath = ["src"]
 timeout = 10
 testpaths = ["tests"]
-
 addopts = [
   "-ra",
   "--strict-config",
@@ -139,7 +141,7 @@ addopts = [
   "--tb=short",
   "--durations=10",
   "--import-mode=importlib",
-  "--cov=src/duplifinder",
+  "--cov=src",
   "--cov-fail-under=90",
   "-m", "not slow",
   "--cov-report=term-missing",
