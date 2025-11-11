@@ -33,13 +33,13 @@ jobs:
       # 🔍 Smoke test: Validate post-install importability
       - name: 🔍 Smoke test import
         env:
-          PYTHONPATH: ${{ github.workspace }}  # Prepend root for src-layout resolution
+          PYTHONPATH: ${{ github.workspace }}/src  # Prepend src for source resolution
         run: python -c "from duplifinder.config import Config; print('Import successful')"
 
       # 🧪 Run tests and check coverage
       - name: 🧪 Run tests & generate coverage
         env:
-          PYTHONPATH: ${{ github.workspace }}  # Prepend root for src-layout resolution
+          PYTHONPATH: ${{ github.workspace }}/src  # Prepend src for source resolution
         run: pytest
 
       # 📊 Upload coverage to Codecov
