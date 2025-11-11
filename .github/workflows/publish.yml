@@ -39,7 +39,9 @@ jobs:
         run: python -c "from duplifinder.config import Config; print('Import successful')"
 
       - name: 🧪 Run tests + coverage
-        run: pytest --maxfail=1 --disable-warnings -q
+        run: |
+          cd duplifinder
+          pytest --maxfail=1 --disable-warnings -q
 
       - name: 📈 Show coverage %
         run: |
@@ -56,13 +58,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: htmlcov-${{ matrix.python-version }}
-          path: htmlcov/
+          path: duplifinder/htmlcov/
 
       - name: 📊 Upload coverage to Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.xml
+          files: ./duplifinder/coverage.xml
           verbose: true
           fail_ci_if_error: true
 
