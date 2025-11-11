@@ -28,7 +28,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
+          cache: pip
 
       - name: 📦 Install build + dev dependencies
         run: |
@@ -45,12 +45,12 @@ jobs:
         run: |
           echo "Coverage %:"
           python - << 'EOF'
-import xml.etree.ElementTree as ET
-tree = ET.parse("coverage.xml")
-root = tree.getroot()
-coverage = float(root.get("line-rate")) * 100
-print(f"{coverage:.2f}%")
-EOF
+          import xml.etree.ElementTree as ET
+          tree = ET.parse("coverage.xml")
+          root = tree.getroot()
+          coverage = float(root.get("line-rate")) * 100
+          print(f"{coverage:.2f}%")
+          EOF
 
       - name: 📦 Upload HTML coverage report
         uses: actions/upload-artifact@v4
