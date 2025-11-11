@@ -120,10 +120,9 @@ exclude = ["^tests/.*", "^build/.*", "^dist/.*"]
 module = ["rich.*", "tqdm.*"]
 ignore_missing_imports = true
 
-
 [tool.pytest.ini_options]
 minversion = "8.0"
-# Removed: pythonpath = "src"  # Handled by editable install in CI/local dev
+pythonpath = ["src"]  # Auto-prepend src for package imports
 timeout = 10
 testpaths = ["tests"]
 addopts = [
@@ -133,6 +132,7 @@ addopts = [
   "-v",
   "--tb=short",
   "--durations=10",
+  "--import-mode=importlib",  # Avoid sys.path conflicts in src-layout
   "--cov=src/duplifinder",
   "--cov-fail-under=90",
   "-m not slow",

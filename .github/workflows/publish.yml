@@ -27,20 +27,13 @@ jobs:
       - name: 📦 Install build and test tools
         run: |
           python -m pip install --upgrade pip
-          # Non-editable install: deps + built package for CI stability; source exec via PYTHONPATH
-          pip install .[dev]
+          pip install .[dev]  # Non-editable: Builds to site-packages for stability
 
-      # 🔍 Smoke test: Validate post-install importability
       - name: 🔍 Smoke test import
-        env:
-          PYTHONPATH: ${{ github.workspace }}/src  # Prepend src for source resolution
-        run: python -c "from duplifinder.config import Config; print('Import successful')"
+        run: python -c "from duplifinder.config import Config; print('Import successful')"  # Uses site-packages
 
-      # 🧪 Run tests and check coverage
       - name: 🧪 Run tests & generate coverage
-        env:
-          PYTHONPATH: ${{ github.workspace }}/src  # Prepend src for source resolution
-        run: pytest
+        run: pytest  # pyproject.toml auto-configures src path + importlib
 
       # 📊 Upload coverage to Codecov
       - name: 📊 Upload coverage reports to Codecov
