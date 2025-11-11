@@ -11,12 +11,9 @@ permissions:
 
 jobs:
   build-and-publish:
-    name: Build, Test & Publish
     runs-on: ubuntu-latest
-    environment: pypi
 
     strategy:
-      fail-fast: true
       matrix:
         python-version: ["3.12", "3.13"]
 
@@ -25,52 +22,44 @@ jobs:
       - name: 🧩 Checkout code
         uses: actions/checkout@v4
         with:
-          clean: true
           fetch-depth: 0
+
+      - name: ✅ Fix working directory
+        working-directory: ${{ github.workspace }}
+        run: ls -R .
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          cache: pip
 
       - name: 📦 Install dependencies
+        working-directory: ${{ github.workspace }}
         run: |
           python -m pip install --upgrade pip
-          pip install -e .           # ✅ install package from src/
-          pip install .[dev]         # ✅ install dev tools after package
+          pip install -e .
+          pip install .[dev]
 
       - name: 🔍 Smoke test import
+        working-directory: ${{ github.workspace }}
         run: python -c "from duplifinder.config import Config; print('Import successful')"
 
       - name: 🧪 Run tests + coverage
+        working-directory: ${{ github.workspace }}
         run: pytest --maxfail=1 --disable-warnings -q
-
-      - name: 📦 Upload HTML coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: htmlcov-${{ matrix.python-version }}
-          path: htmlcov/
-
-      - name: 📊 Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.xml
-          verbose: true
-          fail_ci_if_error: true
 
       - name: ⚙️ Build distribution packages
         if: matrix.python-version == '3.12'
+        working-directory: ${{ github.workspace }}
         run: python -m build
 
       - name: ✅ Verify distribution
         if: matrix.python-version == '3.12'
+        working-directory: ${{ github.workspace }}
         run: twine check dist/*
 
-      - name: 🚀 Publish to PyPI (via OIDC)
+      - name: 🚀 Publish to PyPI
         if: matrix.python-version == '3.12'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           verbose: true
-          skip-existing: false
