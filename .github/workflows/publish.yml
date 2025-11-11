@@ -24,6 +24,9 @@ jobs:
 
       - name: 🧩 Checkout code
         uses: actions/checkout@v4
+        with:
+          clean: true
+          fetch-depth: 0
 
       - name: 🐍 Set up Python
         uses: actions/setup-python@v5
@@ -34,14 +37,11 @@ jobs:
       - name: 📦 Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install .[dev]
-          pip install -e .      # ✅ REQUIRED FIX
+          pip install -e .           # ✅ install package from src/
+          pip install .[dev]         # ✅ install dev tools after package
 
       - name: 🔍 Smoke test import
         run: python -c "from duplifinder.config import Config; print('Import successful')"
-
-      - name: ✅ Fix Python path
-        run: echo "PYTHONPATH=$PWD/src" >> $GITHUB_ENV
 
       - name: 🧪 Run tests + coverage
         run: pytest --maxfail=1 --disable-warnings -q
