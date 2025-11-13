@@ -2,8 +2,7 @@
 requires = ["setuptools>=70.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.dynamic]
-version = {attr = "duplifinder.__version__.__version__"}
+
 
 [tool.setuptools]
 package-dir = { "" = "src" }
@@ -13,7 +12,7 @@ where = ["src"]
 
 [project]
 name = "duplifinder"
-dynamic = ["version"]
+version = "8.0.0"
 description = "Detect duplicate Python definitions, text patterns, and token similarities for codebase maintainability."
 readme = "README.md"
 requires-python = ">=3.12"

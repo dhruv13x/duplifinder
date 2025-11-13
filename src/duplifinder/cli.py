@@ -6,9 +6,9 @@ import argparse
 import logging
 import pathlib
 from typing import Dict
+from importlib import metadata
 
 from .config import Config, load_config_file, DEFAULT_IGNORES
-from . import __version__
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -54,6 +54,11 @@ def create_parser() -> argparse.ArgumentParser:
     output_group.add_argument("--verbose", action="store_true", help="Print detailed logs.")
     output_group.add_argument("--audit", action="store_true", help="Enable audit logging for file access trails (JSONL).")
     output_group.add_argument("--audit-log", type=str, help="Path for audit log output (defaults to .duplifinder_audit.jsonl).")
+    
+    try:
+        __version__ = metadata.version("duplifinder")
+    except metadata.PackageNotFoundError:
+        __version__ = "0.0.0"
     output_group.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     
     return parser
