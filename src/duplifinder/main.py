@@ -11,6 +11,7 @@ from .finder import find_definitions, find_text_matches, find_token_duplicates, 
 from .output import render_duplicates, render_search, render_search_json
 from .config import Config
 from .utils import audit_log_event
+from .banner import print_logo
 
 
 def flatten_definitions(results: Dict[str, Dict[str, List[Tuple[str, str]]]] ) -> Dict[str, List[Tuple[str, str]]]:
@@ -25,6 +26,7 @@ def flatten_definitions(results: Dict[str, Dict[str, List[Tuple[str, str]]]] ) -
 
 def main() -> None:
     """Run the main Duplifinder workflow."""
+    print_logo()
     parser = create_parser()
     args = parser.parse_args()
 
