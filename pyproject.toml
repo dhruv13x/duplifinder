@@ -12,7 +12,7 @@ where = ["src"]
 
 [project]
 name = "duplifinder"
-version = "9.0.0"
+version = "10.0.0"
 description = "Detect duplicate Python definitions, text patterns, and token similarities for codebase maintainability."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -141,7 +141,7 @@ addopts = [
   "--durations=10",
   "--import-mode=importlib",
   "--cov=src",
-  "--cov-fail-under=90",
+  "--cov-fail-under=97",
   "-m", "not slow",
   "--cov-report=term-missing",
   "--cov-report=html",
