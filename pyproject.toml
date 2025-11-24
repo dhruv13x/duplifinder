@@ -12,7 +12,7 @@ where = ["src"]
 
 [project]
 name = "duplifinder"
-version = "10.0.0"
+version = "10.0.1"
 description = "Detect duplicate Python definitions, text patterns, and token similarities for codebase maintainability."
 readme = "README.md"
 requires-python = ">=3.12"
