@@ -6,7 +6,8 @@
 
 <!-- Package Info -->
 [![PyPI version](https://img.shields.io/pypi/v/duplifinder.svg)](https://pypi.org/project/duplifinder/)
-[![Python](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/)
+[![Smart Update](https://img.shields.io/badge/smart-update-green.svg)](https://github.com/dhruv13x/duplifinder)
 ![Wheel](https://img.shields.io/pypi/wheel/duplifinder.svg)
 [![Release](https://img.shields.io/badge/release-PyPI-blue)](https://pypi.org/project/duplifinder/)
 
@@ -52,6 +53,17 @@ Duplifinder leverages Python's AST for precise scanning, parallelizes for large 
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 
+## Smart Update Strategy
+
+This `README.md` is maintained by a "Gold Standard" generation process that ensures it is always aligned with the latest source code.
+
+1.  **Analyze**: The build process compares the current Source Code (`pyproject.toml`, `src/duplifinder/`) against this `README.md`.
+2.  **Detect**: It automatically identifies changes—new CLI arguments, updated defaults, or refactored features.
+3.  **Refine**: Outdated sections are updated to reflect the new code, preserving the original intent and author's voice.
+4.  **Enhance**: If the structure has degraded, it's reorganized back to the "Required Structure."
+
+This guarantees that the documentation you're reading is never stale.
+
 ## Features
 
 - **AST-Powered Detection**: Identifies duplicates in `ClassDef`, `FunctionDef`, `AsyncFunctionDef` (including class methods as `ClassName.method`).
@@ -79,7 +91,7 @@ cd duplifinder
 pip install -e ".[dev]"
 ```
 
-Requires Python 3.12+. No additional setup for core usage; dev extras include pytest/mypy/black.
+> **Note**: `duplifinder` requires Python 3.12 or later.
 
 ## Quick Start
 
@@ -167,6 +179,7 @@ audit: true  # v6.1.0+: Enable file access trails
 audit_log: "./logs/audit.jsonl"
 similarity_threshold: 0.8
 dup_threshold: 0.1  # Alert if >10% dup rate
+respect_gitignore: true # Disable with `false`
 ```
 
 Load with `duplifinder . --config .duplifinder.yaml`.
@@ -180,6 +193,7 @@ Load with `duplifinder . --config .duplifinder.yaml`.
 | `--ignore <dirs>` | Comma-separated ignores (e.g., `.git,build`) | Built-ins |
 | `--exclude-patterns <globs>` | File globs to skip (e.g., `*.pyc`) | None |
 | `--exclude-names <regexes>` | Name regexes to filter (e.g., `^_`) | None |
+| `--no-gitignore` | Disable auto-respect of `.gitignore` | `False` |
 | `-f, --find <items>` | Types/names (e.g., `class`, `MyClass`) | All types |
 | `--find-regex <patterns>` | Regex for types/names | None |
 | `--pattern-regex <patterns>` | Text mode regexes | None |
@@ -284,6 +298,41 @@ Threshold alerts:
 ```bash
 duplifinder . --dup-threshold 0.05 --fail  # Fail if >5% dup rate
 ```
+
+## 🏗️ Architecture
+
+This project follows a modular, testable architecture designed for extensibility.
+
+### Directory Structure (Key Files)
+
+```
+src/duplifinder/
+├── main.py           # CLI entry point orchestration
+├── cli.py            # argparse setup and config building
+├── config.py         # Pydantic models for validated configuration
+│
+├── finder.py         # Dispatches to the correct finder based on mode
+├── definition_finder.py # Finds class/function duplicates via AST
+├── text_finder.py    # Finds pattern duplicates via regex
+├── token_finder.py   # Finds near-duplicates via tokenization
+├── search_finder.py  # Finds all occurrences of a specific item
+│
+├── ast_processor.py  # Core logic for walking the AST
+├── token_processor.py# Logic for tokenizing and comparing files
+├── text_processor.py # Logic for line-by-line regex matching
+│
+├── output.py         # Renders Rich tables and JSON output
+└── utils.py          # Shared utilities (e.g., audit logging)
+```
+
+### Core Logic Flow
+
+1.  **Initialization**: `main.py` serves as the entry point, invoking `cli.py` to parse arguments.
+2.  **Configuration**: `cli.py` and `config.py` build a validated `Config` object from CLI flags and `.duplifinder.yaml`.
+3.  **Dispatch**: Based on the configuration (`--token-mode`, `--search`, etc.), `main.py` selects the appropriate function from `finder.py`.
+4.  **Processing**: The chosen finder uses a parallelized processor (`ast_processor`, `token_processor`) to scan files, collect definitions, and identify duplicates.
+5.  **Rendering**: The results are passed to `output.py`, which uses `rich` to render console tables or generates a JSON report.
+6.  **Exit**: `main.py` returns an appropriate exit code (`0` for success, `1` for duplicates if `--fail` is set) for CI/CD integration.
 
 ## Best Practices
 
