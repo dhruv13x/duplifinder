@@ -201,3 +201,32 @@ def test_render_duplicates_preview_mode_no_snippet(capsys, mock_config):
     assert "a.py:1" in captured.out
     assert "b.py:2" in captured.out
     assert "No duplicates found" not in captured.out
+
+
+def test_render_search_preview_mode(capsys, mock_config: Config):
+    """Test that preview mode is triggered for search results."""
+    mock_config.preview = True
+    results = {"class Foo": [("file.py:1", "snippet")]}
+    with patch("duplifinder.search_renderer.Syntax") as mock_syntax, \
+         patch("duplifinder.search_renderer.Panel") as mock_panel:
+        render_search(results, mock_config)
+    mock_syntax.assert_called_once_with("snippet", "python", theme="monokai", line_numbers=False)
+    mock_panel.assert_called_once()
+
+
+def test_render_search_fail_on_duplicates(mock_config: Config):
+    """Test that SystemExit is raised for multiple occurrences when fail_on_duplicates is True."""
+    mock_config.fail_on_duplicates = True
+    results = {"def my_func": [("a.py:1", "snip"), ("b.py:2", "snip")]}
+    with pytest.raises(SystemExit) as e:
+        render_search(results, mock_config)
+    assert e.value.code == 1
+
+
+def test_render_search_no_snippet(capsys, mock_config: Config):
+    """Test that the preview is skipped if the snippet is empty."""
+    mock_config.preview = True
+    results = {"class Foo": [("file.py:1", "")]}
+    with patch("duplifinder.search_renderer.Syntax") as mock_syntax:
+        render_search(results, mock_config)
+    mock_syntax.assert_not_called()

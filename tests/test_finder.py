@@ -200,3 +200,28 @@ def test_find_token_duplicates(mock_config: Config, caplog):
     assert skipped == ["b.py"]
     assert "similar" in results
     assert "Scanned 1 files, skipped 1" in caplog.text
+
+
+def test_find_search_matches_invalid_spec(mock_config: Config):
+    """Test that find_search_matches raises ValueError for invalid specs."""
+    mock_config.search_specs = ["invalid_spec"]
+    with pytest.raises(ValueError, match="Invalid spec"):
+        find_search_matches(mock_config)
+
+
+def test_find_search_matches_invalid_type(mock_config: Config):
+    """Test that find_search_matches raises ValueError for invalid types."""
+    mock_config.search_specs = ["invalid_type MyClass"]
+    with pytest.raises(ValueError, match="Invalid type"):
+        find_search_matches(mock_config)
+
+def test_find_search_matches_verbose_logging(mock_config: Config, caplog):
+    """Test verbose logging in find_search_matches."""
+    mock_config.verbose = True
+    mock_config.search_specs = ["class MyClass"]
+    caplog.set_level(logging.INFO)
+
+    with patch('duplifinder.search_finder.discover_py_files', return_value=[]):
+        find_search_matches(mock_config)
+
+    assert "Searched 0 files" in caplog.text
