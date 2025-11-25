@@ -96,6 +96,28 @@ def test_estimate_dup_lines_above_min(mock_config, sample_py_file):
     assert estimate_dup_lines(items, False, mock_config) > 0
 
 
+def test_estimate_dup_lines_empty(mock_config):
+    """Test that an empty list of items returns 0."""
+    assert estimate_dup_lines([], False, mock_config) == 0
+
+
+def test_estimate_dup_lines_text_like(mock_config):
+    """Test the estimation for text-like duplicates."""
+    mock_config.min_occurrences = 1
+    items = [("loc1", "TODO"), ("loc2", "TODO")]
+    # (2 - 1) * 3 * 2 = 6
+    assert estimate_dup_lines(items, True, mock_config) == 6
+
+
+def test_estimate_dup_lines_no_snippet(mock_config):
+    """Test AST-based estimation when a snippet is None."""
+    mock_config.min_occurrences = 1
+    items = [("loc1", "class A:\n    pass"), ("loc2", None)]
+    # avg_size = (2 + 10) // 2 = 6
+    # (2 - 1) * 6 * 2 = 12
+    assert estimate_dup_lines(items, False, mock_config) == 12
+
+
 def test_process_file_ast_preview_indent(tmp_path: Path, mock_config: Config):
     """Test AST snippet generation with indentation."""
     py_file = tmp_path / "test.py"
