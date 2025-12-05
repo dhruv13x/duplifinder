@@ -74,9 +74,10 @@ duplifinder . --preview --verbose
 - **Parallel Processing**: Threaded or multiprocessing support for monorepos (GIL-aware).
 - **Search Mode**: Locate all occurrences of specific definitions (singletons or multiples).
 - **Text Pattern Matching**: Regex-based search for arbitrary snippets (e.g., TODOs, FIXMEs).
-- **Rich Outputs**: Human-readable console tables and machine-readable JSON.
+- **Rich Outputs**: Human-readable console tables, machine-readable JSON, and interactive HTML reports.
 - **Audit Logging**: Opt-in JSONL trails for file access and compliance.
 - **CI-Friendly**: Exit codes for fails, dup thresholds, and metrics export.
+- **Smart Caching**: Drastically faster re-scans by caching unchanged file results.
 
 ---
 
