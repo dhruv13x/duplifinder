@@ -29,7 +29,7 @@ This document outlines the strategic vision for `duplifinder`, organized by ambi
 
 **Focus**: Feature parity with top competitors, user experience improvements, and robust developer tooling.
 
-- [ ] **Pre-commit Hook**: Official hook to prevent duplicates from entering the codebase.
+- [x] **Pre-commit Hook**: Official hook to prevent duplicates from entering the codebase.
 - [ ] **Automated Refactoring Suggestions**: Simple, actionable advice for resolving common duplication patterns.
 - [ ] **Support for More Languages**: Extend token/text detection to JavaScript, TypeScript, and Java.
 - [ ] **Watch Mode**: "Live" scanning that updates results as you save files (DevEx improvement).

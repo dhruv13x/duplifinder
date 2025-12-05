@@ -1,0 +1,6 @@
+-   id: duplifinder
+    name: Duplifinder
+    description: Detect and refactor duplicate Python code
+    entry: duplifinder
+    language: python
+    types: [python]
