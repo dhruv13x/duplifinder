@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 import pytest
 from duplifinder.main import main
-import runpy
+from duplifinder.application import WorkflowFactory
 
 # HELPER: A mock for sys.exit that preserves the exit code
 def mock_sys_exit(code=0):
@@ -17,14 +17,14 @@ def mock_sys_exit(code=0):
 def test_main_default_run(monkeypatch, capsys):
     """Test default run: no dups → exit 0."""
     monkeypatch.setattr(sys, 'argv', ['duplifinder', '.'])
-    # FIXED: Added audit_enabled=False
     mock_config = Mock(search_mode=False, pattern_regexes=[], token_mode=False, audit_enabled=False)
     mock_config.root = Path('.')
     mock_config.ignore_dirs = set()
     nested_empty = {'class': {}, 'def': {}, 'async_def': {}}  # Empty nested
+
     with patch('duplifinder.main.build_config', return_value=mock_config), \
-         patch('duplifinder.main.find_definitions', return_value=(nested_empty, [], 1, 10, 0)), \
-         patch('duplifinder.main.render_duplicates', side_effect=lambda *args: print('No duplicates found')), \
+         patch('duplifinder.application.find_definitions', return_value=(nested_empty, [], 1, 10, 0)), \
+         patch('duplifinder.application.render_duplicates', side_effect=lambda *args, **kwargs: print('No duplicates found')), \
          patch('sys.exit', side_effect=lambda *args: None):  # This one is OK, it expects exit 0 (no raise)
         main()
     captured = capsys.readouterr()
@@ -49,9 +49,10 @@ def test_main_scan_fail_high_skips(monkeypatch):
     mock_config.root = Path('.')
     mock_config.ignore_dirs = set()
     nested_empty = {'class': {}, 'def': {}, 'async_def': {}}  # Empty nested
+
     with patch('duplifinder.main.build_config', return_value=mock_config), \
-         patch('duplifinder.main.find_definitions', return_value=(nested_empty, ['s'] * 11, 1, 10, 0)), \
-         patch('duplifinder.main.render_duplicates'):
+         patch('duplifinder.application.find_definitions', return_value=(nested_empty, ['s'] * 11, 1, 10, 0)), \
+         patch('duplifinder.application.render_duplicates'):
          # FIXED: Removed patch('sys.exit', ...)
         with pytest.raises(SystemExit) as exc:
             main()
@@ -66,17 +67,15 @@ def test_main_fail_on_dups(monkeypatch):
     mock_config.root = Path('.')
     mock_config.ignore_dirs = set()
     nested_dups = {'class': {'Dup': [('file:1', '') , ('file:2', '')]}}  # Nested with 2 items
+
     with patch('duplifinder.main.build_config', return_value=mock_config), \
-         patch('duplifinder.main.find_definitions', return_value=(nested_dups, [], 1, 10, 5)), \
-         patch('duplifinder.main.render_duplicates'):
+         patch('duplifinder.application.find_definitions', return_value=(nested_dups, [], 1, 10, 5)), \
+         patch('duplifinder.application.render_duplicates'):
          # FIXED: Removed patch('sys.exit', ...)
         with pytest.raises(SystemExit) as exc:
             main()
         # This assert was missing, but it's implied by the test name
         assert exc.value.code == 1
-        
-        
-
 
 
 def test_main_search_mode_json_output(monkeypatch):
@@ -91,8 +90,8 @@ def test_main_search_mode_json_output(monkeypatch):
     mock_render_json = Mock()
 
     with patch('duplifinder.main.build_config', return_value=mock_config), \
-         patch('duplifinder.main.find_search_matches', return_value=({}, [], 1)), \
-         patch('duplifinder.main.render_search_json', mock_render_json), \
+         patch('duplifinder.application.find_search_matches', return_value=({}, [], 1)), \
+         patch('duplifinder.application.render_search_json', mock_render_json), \
          patch('sys.exit', side_effect=mock_sys_exit): # FIXED: Use helper
         
         with pytest.raises(SystemExit) as exc:
@@ -115,8 +114,8 @@ def test_main_token_mode_dup_threshold_alert(monkeypatch, capsys):
     )
     
     with patch('duplifinder.main.build_config', return_value=mock_config), \
-         patch('duplifinder.main.find_token_duplicates', return_value=({}, [], 1, 100, 20)), \
-         patch('duplifinder.main.render_duplicates'), \
+         patch('duplifinder.application.find_token_duplicates', return_value=({}, [], 1, 100, 20)), \
+         patch('duplifinder.application.render_duplicates'), \
          patch('sys.exit', side_effect=mock_sys_exit): # FIXED: Use helper
         
         with pytest.raises(SystemExit) as exc:
@@ -140,8 +139,8 @@ def test_main_token_mode_fail_on_dups(monkeypatch):
     )
     
     with patch('duplifinder.main.build_config', return_value=mock_config), \
-         patch('duplifinder.main.find_token_duplicates', return_value=({}, [], 1, 100, 5)), \
-         patch('duplifinder.main.render_duplicates'), \
+         patch('duplifinder.application.find_token_duplicates', return_value=({}, [], 1, 100, 5)), \
+         patch('duplifinder.application.render_duplicates'), \
          patch('sys.exit', side_effect=mock_sys_exit): # FIXED: Use helper
         
         with pytest.raises(SystemExit) as exc:
@@ -162,8 +161,8 @@ def test_main_text_mode_fail_on_dups(monkeypatch):
     )
     
     with patch('duplifinder.main.build_config', return_value=mock_config), \
-         patch('duplifinder.main.find_text_matches', return_value=({'TODO': ['a:1', 'b:2']}, [], 1, 100, 5)), \
-         patch('duplifinder.main.render_duplicates'), \
+         patch('duplifinder.application.find_text_matches', return_value=({'TODO': ['a:1', 'b:2']}, [], 1, 100, 5)), \
+         patch('duplifinder.application.render_duplicates'), \
          patch('sys.exit', side_effect=mock_sys_exit): # FIXED: Use helper
         
         with pytest.raises(SystemExit) as exc:
