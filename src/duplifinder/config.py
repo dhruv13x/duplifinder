@@ -9,6 +9,7 @@ from typing import Dict, List, Set
 # MODIFIED: Import field_validator and ValidationInfo, remove validator
 from pydantic import BaseModel, Field, field_validator, ValidationInfo
 import yaml
+from .exceptions import ConfigError
 
 DEFAULT_IGNORES = {".git", "__pycache__", ".venv", "venv", "build", "dist", "node_modules"}
 KNOWN_TYPES = {"class", "def", "async_def"}
@@ -50,7 +51,7 @@ class Config(BaseModel):
     def validate_types(cls, v: Set[str]) -> Set[str]:
         invalid = v - KNOWN_TYPES
         if invalid:
-            raise ValueError(f"Unsupported types: {', '.join(invalid)}. Supported: {', '.join(KNOWN_TYPES)}")
+            raise ConfigError(f"Unsupported types: {', '.join(invalid)}. Supported: {', '.join(KNOWN_TYPES)}")
         return v
 
     # MODIFIED: Use @field_validator with mode='before' (for pre=True)
@@ -63,7 +64,7 @@ class Config(BaseModel):
                 re.compile(pat)
                 compiled.append(pat)
             except re.error as e:
-                raise ValueError(f"Invalid regex '{pat}': {e}")
+                raise ConfigError(f"Invalid regex '{pat}': {e}")
         return compiled
 
     # MODIFIED: Use @field_validator with mode='before' (for pre=True)
@@ -76,12 +77,12 @@ class Config(BaseModel):
         for spec in v:
             parts = spec.strip().split(maxsplit=1)
             if len(parts) != 2:
-                raise ValueError(f"Invalid search spec '{spec}': Must be 'type name'.")
+                raise ConfigError(f"Invalid search spec '{spec}': Must be 'type name'.")
             typ, name = parts
             if typ not in valid_types:
-                raise ValueError(f"Invalid type '{typ}' in '{spec}': {', '.join(valid_types)}")
+                raise ConfigError(f"Invalid type '{typ}' in '{spec}': {', '.join(valid_types)}")
             if not name:
-                raise ValueError(f"Empty name in '{spec}'.")
+                raise ConfigError(f"Empty name in '{spec}'.")
         return v
 
     # MODIFIED: Use @field_validator and ValidationInfo to access other field data
@@ -91,7 +92,7 @@ class Config(BaseModel):
         if info.data.get("audit_enabled") and not isinstance(v, Path):
             v = Path(v)
         if info.data.get("audit_enabled") and v.exists() and not v.parent.is_dir():
-            raise ValueError(f"Audit log path '{v}' parent directory does not exist")
+            raise ConfigError(f"Audit log path '{v}' parent directory does not exist")
         return v
 
 
@@ -101,4 +102,4 @@ def load_config_file(path: str | Path) -> Dict:
         with open(path, "r") as f:
             return yaml.safe_load(f) or {}
     except Exception as e:
-        raise ValueError(f"Failed to load config '{path}': {e}")
+        raise ConfigError(f"Failed to load config '{path}': {e}")

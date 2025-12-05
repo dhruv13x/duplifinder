@@ -15,6 +15,7 @@ import ast
 from .ast_visitor import EnhancedDefinitionVisitor
 from .config import Config
 from .utils import audit_log_event
+from .exceptions import FileProcessingError
 
 
 def process_file_ast(py_file: Path, config: Config) -> Tuple[Dict[str, Dict[str, List[Tuple[str, str]]]], str | None, int]:
@@ -37,7 +38,12 @@ def process_file_ast(py_file: Path, config: Config) -> Tuple[Dict[str, Dict[str,
         total_lines = len(text.splitlines())
         audit_log_event(config, "file_parsed", path=str_py_file, action="ast_success", bytes_read=bytes_read, lines=total_lines)
         
-        tree = ast.parse(text, filename=str_py_file)
+        try:
+            tree = ast.parse(text, filename=str_py_file)
+        except (SyntaxError, ValueError) as e:
+            # Re-raise as known processing error, which will be caught below or handled
+            raise FileProcessingError(f"Parsing failed: {e}", str_py_file, reason=f"{type(e).__name__}: {e}")
+
         lines = text.splitlines() if config.preview else []
         visitor = EnhancedDefinitionVisitor(config.types_to_search)
         visitor.visit(tree)
@@ -58,16 +64,20 @@ def process_file_ast(py_file: Path, config: Config) -> Tuple[Dict[str, Dict[str,
                 definitions[t][name].append((loc, snippet))
         return definitions, None, total_lines
     
-    # FIXED: Moved UnicodeDecodeError BEFORE ValueError
     except UnicodeDecodeError as e:
         reason = f"encoding_error: {e}"
         audit_log_event(config, "file_skipped", path=str_py_file, reason=reason)
         logging.warning(f"Skipping {str_py_file} due to encoding error: {e}; try --encoding flag in future")
         return {}, str_py_file, 0
-    except (SyntaxError, ValueError) as e:
-        reason = f"{type(e).__name__}: {e}"
+    except FileProcessingError as e:
+        reason = e.reason
         audit_log_event(config, "file_skipped", path=str_py_file, reason=reason)
-        logging.error(f"Skipping {str_py_file} due to parsing error: {reason}", exc_info=config.verbose)
+        # We can now provide richer error info if we want, or just log it.
+        # The requirement says "More granular error reporting".
+        # Currently we just log and skip.
+        # If we wanted to fail hard on syntax errors, we would re-raise here if config.fail_on_error was true (but it's not a config option yet).
+        # For now, we continue to skip but we have the infrastructure to propagate it if needed.
+        logging.error(f"Skipping {str_py_file} due to processing error: {e.args[0]}", exc_info=config.verbose)
         return {}, str_py_file, 0
     except Exception as e:
         reason = f"{type(e).__name__}: {e}"
