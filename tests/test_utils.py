@@ -88,7 +88,7 @@ def test_run_parallel_parallel(mock_config: Config):
 def test_parse_gitignore(tmp_path: Path, audit_config: Config):
     """Test parsing of .gitignore files."""
     gitignore = tmp_path / ".gitignore"
-    gitignore.write_text("*.log\n!important.log\n# a comment\n/build/\n")
+    gitignore.write_text("*.log\n!important.log\n# a comment\n/build/\n!\nnegated.txt\n")
     audit_config.root = tmp_path
 
     patterns = _parse_gitignore(gitignore, audit_config)
@@ -96,6 +96,7 @@ def test_parse_gitignore(tmp_path: Path, audit_config: Config):
     assert "!important.log" in patterns
     assert "# a comment" not in patterns
     assert "/build/" in patterns
+    assert "!negated.txt" in patterns  # Test the '!\npattern' format
 
 def test_discover_py_files_with_gitignore(tmp_path: Path, mock_config: Config):
     """Test that discover_py_files respects .gitignore."""

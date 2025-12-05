@@ -17,7 +17,7 @@ This document outlines the strategic vision for `duplifinder`, from core essenti
 - [x] **Configuration File**: Support for `.duplifinder.yaml`.
 - [x] **Enhanced Error Handling**: More granular error reporting for file parsing and configuration errors.
 - [x] **Improved Performance Metrics**: Detailed timing and memory usage statistics in verbose mode.
-- [ ] **Code Coverage**: Increase test coverage to 95%+.
+- [x] **Code Coverage**: Increase test coverage to 95%+.
 
 ---
 
