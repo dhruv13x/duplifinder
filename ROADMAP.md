@@ -1,68 +1,75 @@
 # Duplifinder: Project Roadmap
 
-This document outlines the strategic vision for `duplifinder`, from core essentials to ambitious, industry-disrupting features. Our goal is to evolve from a powerful code duplication tool into an indispensable part of the software development lifecycle.
+This document outlines the strategic vision for `duplifinder`, organized by ambitious phases from core foundations to industry-disrupting capabilities. It reflects our commitment to evolving from a duplicate detection tool into an intelligent code quality ecosystem.
 
 ---
 
-## Phase 1: Foundation (Q1)
+## Phase 1: Foundation (CRITICALLY MUST HAVE)
 
-**Focus**: Core functionality, stability, and developer experience. These are critical features that are either partially implemented or essential for a robust tool.
+**Focus**: Core functionality, stability, security, and basic usage. These items ensure the tool is reliable, performant, and usable in standard workflows.
 
 - [x] **AST-Powered Detection**: Core engine for finding duplicate classes, functions, and async defs.
-- [x] **Text Pattern Matching**: Regex-based search for arbitrary text snippets.
-- [x] **Token Similarity Analysis**: Detect near-duplicates using tokenization.
-- [x] **Parallel Processing**: Support for multithreading and multiprocessing.
-- [x] **Rich Console Output**: Human-readable reports with `rich`.
-- [x] **JSON Output**: Machine-readable output for CI/CD integration.
-- [x] **Configuration File**: Support for `.duplifinder.yaml`.
-- [x] **Enhanced Error Handling**: More granular error reporting for file parsing and configuration errors.
-- [x] **Improved Performance Metrics**: Detailed timing and memory usage statistics in verbose mode.
-- [x] **Code Coverage**: Increase test coverage to 95%+.
+- [x] **Text Pattern Matching**: Regex-based search for arbitrary text snippets (TODOs, FIXMEs).
+- [x] **Token Similarity Analysis**: Detect near-duplicates using tokenization and similarity ratios.
+- [x] **Parallel Processing**: Multithreading and multiprocessing support for high-performance scanning.
+- [x] **Rich Console Output**: Human-readable, colored reports using `rich`.
+- [x] **JSON Output**: Machine-readable output for CI/CD integration and external processing.
+- [x] **Configuration File**: Robust configuration via `.duplifinder.yaml`.
+- [x] **Enhanced Error Handling**: Granular error reporting and graceful failure modes.
+- [x] **CI/CD Integration**: Exit codes, thresholds, and pipeline-friendly outputs.
+- [x] **Improved Performance Metrics**: Detailed timing, memory usage, and phase breakdown stats.
+- [x] **Code Coverage**: Test suite coverage exceeding 90%.
+- [x] **Audit Logging**: Secure, structured logging for file access and tool operations.
+- [ ] **Caching**: Implement file hash caching to drastically speed up re-scans of unchanged files.
+- [ ] **HTML Reports**: Generate self-contained, interactive HTML reports for easier sharing and analysis.
 
 ---
 
-## Phase 2: The Standard (Q2)
+## Phase 2: The Standard (MUST HAVE)
 
-**Focus**: Achieving feature parity with top-tier static analysis tools and enhancing user experience.
+**Focus**: Feature parity with top competitors, user experience improvements, and robust developer tooling.
 
-- [ ] **IDE Integration**: Plugins for VS Code, PyCharm, and other popular editors to show duplicates in real-time.
-- [ ] **Automated Refactoring Suggestions**: Provide suggestions for refactoring detected duplicates.
-- [ ] **HTML Reports**: Generate interactive HTML reports with code snippets and navigation.
-- [ ] **Support for More Languages**: Extend duplication detection to other languages like JavaScript, TypeScript, and Java.
-- [ ] **Caching**: Implement a caching mechanism to speed up analysis of unchanged files.
-- [ ] **Pre-commit Hook**: A pre-commit hook to check for duplicates before committing code.
-
----
-
-## Phase 3: The Ecosystem (Q3)
-
-**Focus**: Integration with third-party tools and services, making `duplifinder` a connected part of the development ecosystem.
-
-- [ ] **GitHub Action**: A dedicated GitHub Action for easy integration into CI/CD pipelines.
-- [ ] **Webhook Support**: Send notifications to Slack, Discord, or other services when new duplicates are detected.
-- [ ] **Plugin Architecture**: Allow users to create and share their own finders and output formatters.
-- [ ] **API Exposure**: A public API to allow other tools to programmatically run `duplifinder` and consume its results.
-- [ ] **Integration with Code Quality Platforms**: Integrate with platforms like SonarQube and CodeClimate.
+- [ ] **Pre-commit Hook**: Official hook to prevent duplicates from entering the codebase.
+- [ ] **Automated Refactoring Suggestions**: Simple, actionable advice for resolving common duplication patterns.
+- [ ] **Support for More Languages**: Extend token/text detection to JavaScript, TypeScript, and Java.
+- [ ] **Watch Mode**: "Live" scanning that updates results as you save files (DevEx improvement).
+- [ ] **Git "Blame" Integration**: Identify who introduced a duplicate and when (Code ownership context).
+- [ ] **Interactive Terminal UI (TUI)**: Explore duplicates directly in the terminal with keybindings.
 
 ---
 
-## Phase 4: The Vision (GOD LEVEL) (Q4 and Beyond)
+## Phase 3: The Ecosystem (INTEGRATION & SHOULD HAVE)
 
-**Focus**: Ambitious, forward-thinking features that push the boundaries of what a code analysis tool can do.
+**Focus**: Webhooks, API exposure, 3rd party plugins, SDK generation, and extensibility. Making `duplifinder` a platform.
 
-- [ ] **AI-Powered Refactoring**: Use AI to automatically refactor duplicated code, with suggestions for improving code structure.
-- [ ] **Cross-Repository Analysis**: Detect duplicates across multiple repositories in an organization.
-- [ ] **Semantic Code Search**: A search engine that understands the meaning of code, not just its syntax.
-- [ ] **Predictive Analysis**: Predict where duplicates are likely to occur in the future based on historical data.
-- [ ] **Automated Code Cleanup**: A "self-healing" codebase that automatically removes duplicates and improves code quality over time.
+- [ ] **GitHub Action**: Official Marketplace action for zero-config CI setup.
+- [ ] **Webhook Support**: Notifications for Slack, Discord, or Microsoft Teams on new regression.
+- [ ] **Plugin Architecture**: API for community-contributed finders (e.g., custom AST logic).
+- [ ] **Public API / SDK**: A Python library allowing other tools to import and drive `duplifinder` programmatically.
+- [ ] **Code Quality Platform Integration**: Native report formats for SonarQube, CodeClimate, and others.
+- [ ] **IDE Integration**: VS Code and PyCharm extensions for inline duplicate highlighting.
 
 ---
 
-## The Sandbox (Experimental)
+## Phase 4: The Vision (GOD LEVEL)
 
-**Focus**: Creative, out-of-the-box ideas that could lead to new and innovative features.
+**Focus**: "Futuristic" features, AI integration, advanced automation, and industry-disrupting capabilities.
 
-- [ ] **Gamification**: A "code quality score" that developers can improve by removing duplicates.
-- [ ] **Visualizations**: A visual representation of the codebase that shows where duplicates are located.
-- [ ] **Code Archaeology**: Analyze the history of a codebase to understand how and why duplicates were introduced.
-- [ ] **Natural Language Processing (NLP)**: Use NLP to understand the intent of code and identify conceptual duplicates.
+- [ ] **AI-Powered Refactoring**: LLM integration to rewrite duplicated logic into shared abstractions automatically.
+- [ ] **Cross-Repository Analysis**: Scan an entire GitHub organization to find duplication *between* microservices.
+- [ ] **Semantic Code Search**: Vector-based embeddings to find code that *does* the same thing but *looks* different.
+- [ ] **"Self-Healing" Codebase**: Autonomous agents that detect, refactor, run tests, and open PRs for duplicates.
+- [ ] **Technical Debt Calculator**: Estimate the financial cost of duplication (Time × Avg Salary) to justify refactoring.
+- [ ] **Predictive Analysis**: Machine learning models to identify "hotspots" likely to accumulate duplication.
+
+---
+
+## The Sandbox (OUT OF THE BOX / OPTIONAL)
+
+**Focus**: Wild, creative, experimental ideas that set the project apart.
+
+- [ ] **Gamification**: Leaderboards for "Most Unique Code" and "Top Refactorer".
+- [ ] **Code Archaeology**: Timelines showing the evolution and spread of copy-pasted blocks.
+- [ ] **3D Codebase Visualization**: Render the project as a city where duplicates are connected bridges.
+- [ ] **Jupyter Notebook Scanning**: Special handling for `.ipynb` files to find logic duplicated across data science experiments.
+- [ ] **Dependency Graph Visualization**: Visualizing how duplicates couple modules together.
