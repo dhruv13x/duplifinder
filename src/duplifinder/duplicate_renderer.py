@@ -13,6 +13,7 @@ from rich.panel import Panel
 from rich.syntax import Syntax
 
 from .config import Config
+from .html_renderer import render_html_report
 
 
 def _normalize_for_render(dups: Dict, is_token: bool = False) -> Dict[str, List[Dict[str, Any]]]:
@@ -117,6 +118,27 @@ def render_duplicates(
     # Audit nudge: Optional console hint if enabled
     if config.audit_enabled:
         console.print(f"[dim green]Audit trail logged to {config.audit_log_path}[/dim green]")
+
+    # Generate HTML report if requested
+    if config.html_report:
+        # We need to reshape normalized to the format expected by html_renderer (list of tuples)
+        # However, _normalize_for_render returns List[Dict].
+        # Let's adjust render_html_report to accept this or convert here.
+        # Converting back to simpler format for HTML renderer or updating HTML renderer.
+        # Let's update HTML renderer to accept the normalized format?
+        # Actually, let's just reconstruct the list of tuples expected by the current HTML renderer implementation.
+        # But wait, the current HTML renderer expects Dict[str, List[Tuple[str, str]]]
+
+        # Let's convert normalized back to what html_renderer expects
+        html_duplicates = {}
+        for key, items in duplicates.items():
+            html_items = []
+            for item in items:
+                html_items.append((item["loc"], item["snippet"]))
+            html_duplicates[key] = html_items
+
+        render_html_report(html_duplicates, config, scanned_files, total_lines, dup_lines, dup_rate)
+        console.print(f"[green]HTML report generated at {config.html_report}[/green]")
 
     if config.fail_on_duplicates and duplicates:
         raise SystemExit(1)

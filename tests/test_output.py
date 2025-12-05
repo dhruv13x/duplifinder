@@ -14,7 +14,7 @@ from pathlib import Path
 def test_render_duplicates_empty(capsys):
     """Test empty dups show 'No duplicates'."""
     # FIXED: Added audit_enabled=False
-    config = Mock(spec=Config, preview=False, json_output=False, fail_on_duplicates=False, audit_enabled=False)
+    config = Mock(spec=Config, preview=False, json_output=False, fail_on_duplicates=False, audit_enabled=False, html_report=None)
     # FIXED: Added missing arguments: scanned_files=0, skipped_files=[]
     render_duplicates({}, config, False, 0.0, 0.1, 0, 0, 0, [])
     captured = capsys.readouterr()
@@ -53,7 +53,7 @@ def test_render_duplicates_with_metrics(capsys):
     """Test dup rate alert."""
     
     # ** THE FIX IS HERE: Added preview=False **
-    config = Mock(spec=Config, dup_threshold=0.1, json_output=False, fail_on_duplicates=False, audit_enabled=False, preview=False)
+    config = Mock(spec=Config, dup_threshold=0.1, json_output=False, fail_on_duplicates=False, audit_enabled=False, preview=False, html_report=None)
     
     # FIXED: Added missing arguments: scanned_files=0, skipped_files=[]
     render_duplicates({}, config, False, 0.15, 0.1, 100, 15, 0, [])

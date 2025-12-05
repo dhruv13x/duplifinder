@@ -16,9 +16,10 @@ from .ast_visitor import EnhancedDefinitionVisitor
 from .config import Config
 from .utils import audit_log_event
 from .exceptions import FileProcessingError
+from .cache import CacheManager
 
 
-def process_file_ast(py_file: Path, config: Config) -> Tuple[Dict[str, Dict[str, List[Tuple[str, str]]]], str | None, int]:
+def process_file_ast(py_file: Path, config: Config, cache_manager: CacheManager = None) -> Tuple[Dict[str, Dict[str, List[Tuple[str, str]]]], str | None, int]:
     """Process a single Python file for definitions using AST; return total_lines."""
     str_py_file = str(py_file)
     if any(fnmatch.fnmatch(py_file.name, pat) for pat in config.exclude_patterns):
@@ -26,6 +27,17 @@ def process_file_ast(py_file: Path, config: Config) -> Tuple[Dict[str, Dict[str,
             logging.info(f"Skipping {str_py_file}: matches exclude pattern")
         audit_log_event(config, "file_skipped", path=str_py_file, reason="exclude_pattern_match")
         return {}, str_py_file, 0
+
+    # Cache check
+    file_hash = None
+    if cache_manager:
+        file_hash = CacheManager.compute_hash(py_file)
+        if file_hash:
+            cached = cache_manager.get(str_py_file, file_hash)
+            if cached:
+                if config.verbose:
+                    logging.info(f"Cache hit for {str_py_file}")
+                return cached["definitions"], None, cached["total_lines"]
 
     total_lines = 0
     try:
@@ -62,6 +74,14 @@ def process_file_ast(py_file: Path, config: Config) -> Tuple[Dict[str, Dict[str,
                         snippet_lines = [line[indent:] for line in snippet_lines]
                         snippet = "\n".join(f"{i + 1} {line}" for i, line in enumerate(snippet_lines))
                 definitions[t][name].append((loc, snippet))
+
+        # Update cache
+        if cache_manager and file_hash:
+            cache_manager.set(str_py_file, file_hash, {
+                "definitions": definitions,
+                "total_lines": total_lines
+            })
+
         return definitions, None, total_lines
     
     except UnicodeDecodeError as e:

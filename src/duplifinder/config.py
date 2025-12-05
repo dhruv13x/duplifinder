@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 from pathlib import Path
-from typing import Dict, List, Set
+from typing import Dict, List, Set, Optional
 
 # MODIFIED: Import field_validator and ValidationInfo, remove validator
 from pydantic import BaseModel, Field, field_validator, ValidationInfo
@@ -45,6 +45,16 @@ class Config(BaseModel):
         description="Path for audit log output (JSONL format)"
     )
     respect_gitignore: bool = Field(True, description="Auto-respect .gitignore patterns for exclusions")
+
+    # Caching
+    enable_cache: bool = Field(False, description="Enable file result caching")
+    cache_path: Path = Field(
+        default_factory=lambda: Path(".duplifinder_cache.json"),
+        description="Path to the cache file"
+    )
+
+    # HTML Report
+    html_report: Optional[Path] = Field(None, description="Path to generate HTML report")
 
     # MODIFIED: Use @field_validator
     @field_validator("types_to_search")

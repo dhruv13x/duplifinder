@@ -20,8 +20,8 @@ This document outlines the strategic vision for `duplifinder`, organized by ambi
 - [x] **Improved Performance Metrics**: Detailed timing, memory usage, and phase breakdown stats.
 - [x] **Code Coverage**: Test suite coverage exceeding 90%.
 - [x] **Audit Logging**: Secure, structured logging for file access and tool operations.
-- [ ] **Caching**: Implement file hash caching to drastically speed up re-scans of unchanged files.
-- [ ] **HTML Reports**: Generate self-contained, interactive HTML reports for easier sharing and analysis.
+- [x] **Caching**: Implement file hash caching to drastically speed up re-scans of unchanged files.
+- [x] **HTML Reports**: Generate self-contained, interactive HTML reports for easier sharing and analysis.
 
 ---
 
