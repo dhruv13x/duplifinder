@@ -9,6 +9,7 @@ from typing import Dict
 from importlib import metadata
 
 from .config import Config, load_config_file, DEFAULT_IGNORES
+from .exceptions import ConfigError
 
 
 def create_parser() -> argparse.ArgumentParser:
@@ -124,7 +125,7 @@ def build_config(args: argparse.Namespace) -> Config:
     # Validate via Pydantic
     try:
         config = Config(**merged)
-    except ValueError as e:
+    except (ValueError, ConfigError) as e:
         logging.error(f"Config validation failed: {e}")
         raise SystemExit(2)  # Config error code
 
