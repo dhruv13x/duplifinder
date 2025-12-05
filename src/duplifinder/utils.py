@@ -11,6 +11,7 @@ import os
 import mimetypes
 import threading
 import time
+import tracemalloc
 from pathlib import Path
 from typing import Callable, Generator, List, Any, Dict, Optional
 
@@ -168,3 +169,75 @@ def log_file_count(py_files: List[Path], config: Config, context: str = "process
         logging.info(f"Found {count} Python files to {context}.")
     # Audit: Summary event
     audit_log_event(config, "discovery_summary", file_count=count, context=context)
+
+
+class PerformanceTracker:
+    """Tracks timing and memory usage for performance metrics."""
+
+    def __init__(self, verbose: bool):
+        self.verbose = verbose
+        self.start_time = 0.0
+        self.timings: Dict[str, float] = {}
+        self.phases: Dict[str, float] = {}
+        self.peak_memory = 0
+        self._phase_start = 0.0
+
+    def start(self):
+        """Start tracking."""
+        if self.verbose:
+            self.start_time = time.perf_counter()
+            tracemalloc.start()
+            self._phase_start = self.start_time
+
+    def mark_phase(self, name: str):
+        """Mark the end of a phase and start a new one."""
+        if self.verbose:
+            now = time.perf_counter()
+            duration = now - self._phase_start
+            self.phases[name] = duration
+            self._phase_start = now
+
+    def stop(self):
+        """Stop tracking and capture final metrics."""
+        if self.verbose:
+            # Capture total time
+            total_duration = time.perf_counter() - self.start_time
+            self.timings["total"] = total_duration
+
+            # Capture peak memory
+            _, peak = tracemalloc.get_traced_memory()
+            self.peak_memory = peak
+            tracemalloc.stop()
+
+    def print_metrics(self):
+        """Print performance metrics to console."""
+        if self.verbose:
+            from rich.console import Console
+            from rich.table import Table
+
+            console = Console()
+
+            # Create main table
+            table = Table(title="Performance Metrics", border_style="blue", show_header=True)
+            table.add_column("Metric", style="cyan")
+            table.add_column("Value", style="green")
+
+            # Add general metrics
+            table.add_row("Total Time", f"{self.timings.get('total', 0):.4f}s")
+            table.add_row("Peak Memory", f"{self.peak_memory / 1024 / 1024:.2f} MB")
+
+            console.print(table)
+
+            # Create phases table
+            if self.phases:
+                phase_table = Table(title="Phase Breakdown", border_style="blue", show_header=True)
+                phase_table.add_column("Phase", style="cyan")
+                phase_table.add_column("Duration", style="green")
+                phase_table.add_column("% of Total", style="yellow")
+
+                total = self.timings.get('total', 1) # avoid div by zero
+                for phase, duration in self.phases.items():
+                    percent = (duration / total) * 100
+                    phase_table.add_row(phase, f"{duration:.4f}s", f"{percent:.1f}%")
+
+                console.print(phase_table)
