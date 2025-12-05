@@ -67,7 +67,7 @@ def test_main_duplifinder_error(capsys):
     with patch("duplifinder.main.create_parser"), \
          patch("duplifinder.main.build_config", return_value=mock_config), \
          patch("duplifinder.main.PerformanceTracker"), \
-         patch("duplifinder.main.find_definitions", side_effect=DuplifinderError("Something went wrong")):
+         patch("duplifinder.application.find_definitions", side_effect=DuplifinderError("Something went wrong")):
 
         with pytest.raises(SystemExit) as exc:
             main()
@@ -86,7 +86,7 @@ def test_main_keyboard_interrupt(capsys):
     with patch("duplifinder.main.create_parser"), \
          patch("duplifinder.main.build_config", return_value=mock_config), \
          patch("duplifinder.main.PerformanceTracker"), \
-         patch("duplifinder.main.find_definitions", side_effect=KeyboardInterrupt):
+         patch("duplifinder.application.find_definitions", side_effect=KeyboardInterrupt):
 
         with pytest.raises(SystemExit) as exc:
             main()
@@ -105,7 +105,7 @@ def test_main_generic_exception(capsys):
     with patch("duplifinder.main.create_parser"), \
          patch("duplifinder.main.build_config", return_value=mock_config), \
          patch("duplifinder.main.PerformanceTracker"), \
-         patch("duplifinder.main.find_definitions", side_effect=RuntimeError("Boom")):
+         patch("duplifinder.application.find_definitions", side_effect=RuntimeError("Boom")):
 
         with pytest.raises(SystemExit) as exc:
             main()
@@ -124,7 +124,7 @@ def test_main_system_exit_propagation():
     with patch("duplifinder.main.create_parser"), \
          patch("duplifinder.main.build_config", return_value=mock_config), \
          patch("duplifinder.main.PerformanceTracker"), \
-         patch("duplifinder.main.find_definitions", side_effect=SystemExit(3)):
+         patch("duplifinder.application.find_definitions", side_effect=SystemExit(3)):
 
         with pytest.raises(SystemExit) as exc:
             main()
