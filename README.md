@@ -73,6 +73,7 @@ This guarantees that the documentation you're reading is never stale.
 - **Parallel Processing**: Threaded or multiprocessing for monorepos (GIL-aware; configurable workers).
 - **Rich Outputs**: Human-readable console (with Rich tables), JSON for automation.
 - **Configurable Filtering**: Glob excludes, regex name filters, ignore dirs.
+- **Enhanced Error Handling**: Robust reporting for file parsing (SyntaxError, Encoding) and configuration issues.
 - **Audit Logging**: Opt-in JSONL trails for file access/compliance (v6.1.0+).
 - **CI-Friendly**: Exit codes for fails, dup thresholds, and metrics export.
 
@@ -395,4 +396,3 @@ MIT License. See [LICENSE](LICENSE) for details.
 ---
 
 *Built with ❤️ for Python devs. Questions? [Open an issue](https://github.com/dhruv13x/duplifinder/issues).*
-```
