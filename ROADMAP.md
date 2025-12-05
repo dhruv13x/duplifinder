@@ -16,7 +16,7 @@ This document outlines the strategic vision for `duplifinder`, from core essenti
 - [x] **JSON Output**: Machine-readable output for CI/CD integration.
 - [x] **Configuration File**: Support for `.duplifinder.yaml`.
 - [x] **Enhanced Error Handling**: More granular error reporting for file parsing and configuration errors.
-- [ ] **Improved Performance Metrics**: Detailed timing and memory usage statistics in verbose mode.
+- [x] **Improved Performance Metrics**: Detailed timing and memory usage statistics in verbose mode.
 - [ ] **Code Coverage**: Increase test coverage to 95%+.
 
 ---
