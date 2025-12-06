@@ -32,7 +32,7 @@ This document outlines the strategic vision for `duplifinder`, organized by ambi
 - [x] **Pre-commit Hook**: Official hook to prevent duplicates from entering the codebase.
 - [x] **Automated Refactoring Suggestions**: Simple, actionable advice for resolving common duplication patterns.
 - [x] **Support for More Languages**: Extend token/text detection to JavaScript, TypeScript, and Java.
-- [ ] **Watch Mode**: "Live" scanning that updates results as you save files (DevEx improvement).
+- [x] **Watch Mode**: "Live" scanning that updates results as you save files (DevEx improvement).
 - [ ] **Git "Blame" Integration**: Identify who introduced a duplicate and when (Code ownership context).
 - [ ] **Interactive Terminal UI (TUI)**: Explore duplicates directly in the terminal with keybindings.
 

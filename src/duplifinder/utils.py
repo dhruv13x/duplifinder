@@ -194,8 +194,19 @@ class PerformanceTracker:
         """Start tracking."""
         if self.verbose:
             self.start_time = time.perf_counter()
-            tracemalloc.start()
+            if not tracemalloc.is_tracing():
+                tracemalloc.start()
             self._phase_start = self.start_time
+
+    def reset(self):
+        """Reset internal state for re-runs."""
+        self.start_time = 0.0
+        self.timings = {}
+        self.phases = {}
+        self.peak_memory = 0
+        self._phase_start = 0.0
+        if tracemalloc.is_tracing():
+            tracemalloc.stop()
 
     def mark_phase(self, name: str):
         """Mark the end of a phase and start a new one."""

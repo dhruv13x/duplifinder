@@ -49,7 +49,12 @@ def main() -> None:
         workflow_start = time.perf_counter()  # Start timing post-config
 
         workflow = WorkflowFactory.create(config, tracker, workflow_start)
-        exit_code = workflow.run()
+
+        if config.watch_mode:
+            exit_code = workflow.run_with_watch()
+        else:
+            exit_code = workflow.run()
+
         sys.exit(exit_code)
 
     except DuplifinderError as e:
