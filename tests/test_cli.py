@@ -55,6 +55,8 @@ def test_build_config_default():
     mock_args.audit = False
     mock_args.audit_log = None
     mock_args.no_gitignore = False
+    mock_args.watch = False
+    mock_args.extensions = []
     with patch("duplifinder.cli.load_config_file", return_value={}):
         config = build_config(mock_args)
     assert config.root == Path(".")
@@ -90,6 +92,8 @@ def test_build_config_with_yaml(tmp_path):
     mock_args.audit = False
     mock_args.audit_log = None
     mock_args.no_gitignore = False
+    mock_args.watch = False
+    mock_args.extensions = []
     with patch("duplifinder.cli.load_config_file", return_value={'find': ['class'], 'min': 3}):
         config = build_config(mock_args)
     assert config.types_to_search == {"class"}
@@ -123,6 +127,12 @@ def test_build_config_invalid_regex():
     mock_args.audit = False
     mock_args.audit_log = None
     mock_args.no_gitignore = False
+    mock_args.watch = False
+    mock_args.extensions = []
+    mock_args.watch = False
+    mock_args.extensions = []
+    mock_args.watch = False
+    mock_args.extensions = []
     with patch("duplifinder.cli.load_config_file", return_value={}):
         with pytest.raises(SystemExit) as exc:
             build_config(mock_args)
@@ -156,6 +166,10 @@ def test_build_config_invalid_search_spec():
     mock_args.audit = False
     mock_args.audit_log = None
     mock_args.no_gitignore = False
+    mock_args.watch = False
+    mock_args.extensions = []
+    mock_args.watch = False
+    mock_args.extensions = []
     with patch("duplifinder.cli.load_config_file", return_value={}):
         with pytest.raises(SystemExit) as exc:
             build_config(mock_args)
@@ -189,6 +203,8 @@ def test_build_config_find_processing():
     mock_args.audit = False
     mock_args.audit_log = None
     mock_args.no_gitignore = False
+    mock_args.watch = False
+    mock_args.extensions = []
     with patch("duplifinder.cli.load_config_file", return_value={}):
         config = build_config(mock_args)
     assert "class" in config.types_to_search

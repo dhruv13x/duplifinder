@@ -219,7 +219,9 @@ def test_discover_py_files_stat_error(tmp_path: Path, audit_config, caplog):
 
     mock_file = Mock(spec=Path)
     mock_file.name = "test.py"
+    mock_file.suffix = ".py" # Needs suffix to be checked as a python file
     mock_file.parts = ("test.py",)
+    mock_file.relative_to.return_value = Path("test.py") # Required for gitignore check
     mock_file.stat.side_effect = PermissionError("stat failed")
 
     # FIXED: Added mimetypes patch here as well.
@@ -229,7 +231,7 @@ def test_discover_py_files_stat_error(tmp_path: Path, audit_config, caplog):
 
     log_content = audit_config.audit_log_path.read_text()
     assert "stat_failed" in log_content
-    assert len(files) == 0  # File is skipped
+    assert len(files) == 0  # File is skipped because open() is not mocked for the Mock path object
 
 
 def test_discover_py_files_read_header_error(tmp_path: Path, audit_config, caplog):
