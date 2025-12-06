@@ -34,6 +34,7 @@ def test_tracker_init():
 def test_tracker_lifecycle_verbose(mock_tracemalloc, mock_time, mock_console):
     # Setup tracemalloc return
     mock_tracemalloc.get_traced_memory.return_value = (1000, 5000)  # current, peak
+    mock_tracemalloc.is_tracing.return_value = False # Ensure is_tracing returns False initially
 
     tracker = PerformanceTracker(verbose=True)
 

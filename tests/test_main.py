@@ -17,9 +17,10 @@ def mock_sys_exit(code=0):
 def test_main_default_run(monkeypatch, capsys):
     """Test default run: no dups → exit 0."""
     monkeypatch.setattr(sys, 'argv', ['duplifinder', '.'])
-    mock_config = Mock(search_mode=False, pattern_regexes=[], token_mode=False, audit_enabled=False)
+    mock_config = Mock(search_mode=False, pattern_regexes=[], token_mode=False, audit_enabled=False, watch_mode=False)
     mock_config.root = Path('.')
     mock_config.ignore_dirs = set()
+    mock_config.extensions = [] # Fixed: Added extensions
     nested_empty = {'class': {}, 'def': {}, 'async_def': {}}  # Empty nested
 
     with patch('duplifinder.main.build_config', return_value=mock_config), \
@@ -45,15 +46,16 @@ def test_main_scan_fail_high_skips(monkeypatch):
     """Test >10% skips → exit 3."""
     monkeypatch.setattr(sys, 'argv', ['duplifinder', '.'])
     # FIXED: Added audit_enabled=False
-    mock_config = Mock(search_mode=False, pattern_regexes=[], token_mode=False, audit_enabled=False)
+    mock_config = Mock(search_mode=False, pattern_regexes=[], token_mode=False, audit_enabled=False, watch_mode=False)
     mock_config.root = Path('.')
     mock_config.ignore_dirs = set()
+    mock_config.extensions = [] # Fixed: Added extensions
     nested_empty = {'class': {}, 'def': {}, 'async_def': {}}  # Empty nested
 
     with patch('duplifinder.main.build_config', return_value=mock_config), \
          patch('duplifinder.application.find_definitions', return_value=(nested_empty, ['s'] * 11, 1, 10, 0)), \
-         patch('duplifinder.application.render_duplicates'):
-         # FIXED: Removed patch('sys.exit', ...)
+         patch('duplifinder.application.render_duplicates'), \
+         patch('sys.exit', side_effect=mock_sys_exit):
         with pytest.raises(SystemExit) as exc:
             main()
         assert exc.value.code == 3  # High skip rate
@@ -63,9 +65,10 @@ def test_main_fail_on_dups(monkeypatch):
     """Test dups with --fail → exit 1."""
     monkeypatch.setattr(sys, 'argv', ['duplifinder', '.', '--fail'])
     # FIXED: Added audit_enabled=False
-    mock_config = Mock(fail_on_duplicates=True, search_mode=False, pattern_regexes=[], token_mode=False, audit_enabled=False)
+    mock_config = Mock(fail_on_duplicates=True, search_mode=False, pattern_regexes=[], token_mode=False, audit_enabled=False, watch_mode=False)
     mock_config.root = Path('.')
     mock_config.ignore_dirs = set()
+    mock_config.extensions = [] # Fixed: Added extensions
     nested_dups = {'class': {'Dup': [('file:1', '') , ('file:2', '')]}}  # Nested with 2 items
 
     with patch('duplifinder.main.build_config', return_value=mock_config), \
@@ -85,7 +88,9 @@ def test_main_search_mode_json_output(monkeypatch):
         search_mode=True, 
         json_output=True, 
         audit_enabled=False,
-        fail_on_duplicates=False
+        fail_on_duplicates=False,
+        extensions=[], # Fixed: Added extensions
+        watch_mode=False
     )
     mock_render_json = Mock()
 
@@ -110,7 +115,9 @@ def test_main_token_mode_dup_threshold_alert(monkeypatch, capsys):
         token_mode=True, 
         audit_enabled=False,
         dup_threshold=0.1,  # 10%
-        fail_on_duplicates=False
+        fail_on_duplicates=False,
+        extensions=[], # Fixed: Added extensions
+        watch_mode=False
     )
     
     with patch('duplifinder.main.build_config', return_value=mock_config), \
@@ -135,7 +142,9 @@ def test_main_token_mode_fail_on_dups(monkeypatch):
         token_mode=True, 
         audit_enabled=False,
         dup_threshold=1.0,  # Set high to avoid first exit
-        fail_on_duplicates=True
+        fail_on_duplicates=True,
+        extensions=[], # Fixed: Added extensions
+        watch_mode=False
     )
     
     with patch('duplifinder.main.build_config', return_value=mock_config), \
@@ -157,7 +166,9 @@ def test_main_text_mode_fail_on_dups(monkeypatch):
         token_mode=False, 
         audit_enabled=False,
         dup_threshold=1.0, 
-        fail_on_duplicates=True
+        fail_on_duplicates=True,
+        extensions=[], # Fixed: Added extensions
+        watch_mode=False
     )
     
     with patch('duplifinder.main.build_config', return_value=mock_config), \
