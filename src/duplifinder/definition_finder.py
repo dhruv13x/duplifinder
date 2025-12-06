@@ -21,6 +21,9 @@ def find_definitions(config: Config) -> Tuple[Dict[str, Dict[str, List[Tuple[str
     dup_lines = 0
 
     py_files = discover_py_files(config)
+    # Filter for AST: Only .py files supported for now
+    py_files = [p for p in py_files if p.suffix == '.py']
+
     log_file_count(py_files, config)
 
     # Load cache if enabled

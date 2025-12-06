@@ -46,6 +46,9 @@ class Config(BaseModel):
     )
     respect_gitignore: bool = Field(True, description="Auto-respect .gitignore patterns for exclusions")
 
+    # Language Support
+    extensions: Set[str] = Field(default_factory=lambda: {"py", "js", "ts", "java"}, description="File extensions to scan")
+
     # Caching
     enable_cache: bool = Field(False, description="Enable file result caching")
     cache_path: Path = Field(
