@@ -9,6 +9,9 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple
 
 from .config import Config
+from watchdog.observers import Observer
+
+from .watcher import CodeWatcher
 from .utils import PerformanceTracker, audit_log_event
 from .finder import find_definitions, find_text_matches, find_token_duplicates, find_search_matches
 from .output import render_duplicates, render_search, render_search_json
@@ -26,6 +29,66 @@ class Workflow(ABC):
     def run(self) -> int:
         """Run the workflow and return exit code."""
         pass
+
+    def run_with_watch(self) -> int:
+        """Run the workflow in watch mode."""
+
+        # Initial run
+        print("\n🚀 Starting Watch Mode... (Press Ctrl+C to stop)\n")
+        self.run()
+
+        # Setup watcher with filters
+        # Build patterns from extensions (e.g., ["*.py", "*.js"])
+        patterns = [f"*.{ext}" for ext in self.config.extensions]
+
+        # Build ignore patterns
+        ignore_patterns = [f"{d}/*" for d in self.config.ignore_dirs]
+        # Always ignore our own output files to prevent infinite loops
+        ignore_patterns.append(str(self.config.audit_log_path.name))
+        if self.config.html_report:
+            ignore_patterns.append(str(self.config.html_report.name))
+        ignore_patterns.append(".git/*")
+
+        event_handler = CodeWatcher(
+            patterns=patterns,
+            ignore_patterns=ignore_patterns,
+            ignore_directories=True,
+            case_sensitive=False
+        )
+        observer = Observer()
+
+        # Watch the root directory
+        # If root is a file, watch its parent
+        watch_path = str(self.config.root) if self.config.root.is_dir() else str(self.config.root.parent)
+        observer.schedule(event_handler, watch_path, recursive=True)
+        observer.start()
+
+        print("\n👀 Watching for changes...\n")
+
+        try:
+            while True:
+                # Check for dirty flag
+                if event_handler.dirty_event.wait(timeout=1.0):
+                    # Debounce: Wait a bit to coalesce rapid changes
+                    time.sleep(0.5)
+                    # Clear event immediately so we can detect changes during scan
+                    event_handler.dirty_event.clear()
+
+                    print(f"\n🔄 File changed ({event_handler.last_path})! Re-scanning...\n")
+
+                    # Reset tracker and re-run
+                    self.tracker.reset()
+                    self.tracker.start()
+                    self.workflow_start = time.perf_counter()
+                    self.run()
+                    print("\n👀 Watching for changes...\n")
+
+        except KeyboardInterrupt:
+            observer.stop()
+            print("\n🛑 Stopping Watch Mode.")
+
+        observer.join()
+        return 0
 
 
 class SearchWorkflow(Workflow):

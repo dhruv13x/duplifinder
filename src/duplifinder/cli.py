@@ -46,7 +46,8 @@ def create_parser() -> argparse.ArgumentParser:
     behavior_group.add_argument("--parallel", action="store_true", help="Scan files in parallel.")
     behavior_group.add_argument("--use-multiprocessing", action="store_true", help="Use multiprocessing instead of threading.")
     behavior_group.add_argument("--max-workers", type=int, help="Max workers for parallel processing.")
-    
+    behavior_group.add_argument("--watch", action="store_true", help="Watch mode: live scanning on file changes.")
+
     # Output & Misc
     output_group = parser.add_argument_group("Output & Misc")
     output_group.add_argument("-p", "--preview", action="store_true", help="Show formatted preview of duplicates.")
@@ -106,6 +107,7 @@ def build_config(args: argparse.Namespace) -> Config:
         "audit_enabled": args.audit or config_dict.get("audit", False),
         "audit_log_path": args.audit_log or config_dict.get("audit_log", ".duplifinder_audit.jsonl"),
         "respect_gitignore": not getattr(args, 'no_gitignore', False) and config_dict.get("respect_gitignore", True),
+        "watch_mode": args.watch or config_dict.get("watch", False),
     }
 
     # Process find arguments

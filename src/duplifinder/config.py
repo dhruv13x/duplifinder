@@ -45,6 +45,7 @@ class Config(BaseModel):
         description="Path for audit log output (JSONL format)"
     )
     respect_gitignore: bool = Field(True, description="Auto-respect .gitignore patterns for exclusions")
+    watch_mode: bool = Field(False, description="Enable watch mode for live scanning")
 
     # Language Support
     extensions: Set[str] = Field(default_factory=lambda: {"py", "js", "ts", "java"}, description="File extensions to scan")
