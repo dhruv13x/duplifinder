@@ -65,6 +65,17 @@ duplifinder .
 duplifinder . --preview --verbose
 ```
 
+### Pre-commit Hook
+
+To use `duplifinder` as a pre-commit hook, add this to your `.pre-commit-config.yaml`:
+
+```yaml
+-   repo: https://github.com/dhruv13x/duplifinder
+    rev: v0.1.0  # Use the latest version
+    hooks:
+    -   id: duplifinder
+```
+
 ---
 
 ## ✨ Key Features
