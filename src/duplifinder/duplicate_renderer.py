@@ -14,6 +14,7 @@ from rich.syntax import Syntax
 
 from .config import Config
 from .html_renderer import render_html_report
+from .refactoring import get_refactoring_suggestion
 
 
 def _normalize_for_render(dups: Dict, is_token: bool = False) -> Dict[str, List[Dict[str, Any]]]:
@@ -55,6 +56,12 @@ def render_duplicates(
     normalized = _normalize_for_render(all_results, is_token)
     duplicates = {k: v for k, v in normalized.items() if len(v) >= config.min_occurrences}
 
+    # Add refactoring suggestions to duplicates
+    for key, items in duplicates.items():
+        suggestion = get_refactoring_suggestion(key, len(items))
+        for item in items:
+            item["refactoring_suggestion"] = suggestion
+
     if config.json_output:
         out = {
             "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -62,7 +69,7 @@ def render_duplicates(
             "scanned_files": scanned_files,
             "skipped_files": skipped_files,
             "duplicate_count": len(duplicates),
-            "duplicates": duplicates  # Already normalized
+            "duplicates": duplicates  # Already normalized with suggestions
         }
         print(json.dumps(out, indent=2))
         return
@@ -71,7 +78,9 @@ def render_duplicates(
         # PREVIEW MODE: Use list format with Syntax Highlighting
         for key, items in duplicates.items():
             # Print a colorful title for the definition
+            suggestion = items[0]["refactoring_suggestion"]
             console.print(f"\n[bold magenta]{key}[/bold magenta] defined [bold yellow]{len(items)} time(s):[/bold yellow]")
+            console.print(f"[italic green]💡 Suggestion: {suggestion}[/italic green]")
             for item in items:
                 loc = item["loc"]
                 snippet = item["snippet"]
@@ -98,9 +107,10 @@ def render_duplicates(
         for key, items in duplicates.items():
             # Add color to the title
             title = f"[bold magenta]{key}[/bold magenta] ([bold yellow]{len(items)}[/bold yellow] occurrence(s)):"
+            suggestion = items[0]["refactoring_suggestion"]
             
             # Add color and style to the table
-            table = Table(title=title, border_style="blue")
+            table = Table(title=title, caption=f"[italic green]💡 Suggestion: {suggestion}[/italic green]", border_style="blue")
             
             # Add color to the header
             table.add_column("Location", style="cyan")

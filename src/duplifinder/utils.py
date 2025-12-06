@@ -82,19 +82,25 @@ def _matches_gitignore(path: Path, patterns: List[str], config: Config) -> bool:
 
 
 def discover_py_files(config: Config) -> List[Path]:
-    """Discover Python files, excluding ignored dirs, .gitignore patterns, and non-Py content."""
+    """Discover files to scan, excluding ignored dirs and .gitignore patterns."""
     gitignore_patterns: List[str] = []
     gitignore_path = config.root / ".gitignore"
     if config.respect_gitignore and gitignore_path.exists():
         # FIXED: Pass config
         gitignore_patterns = _parse_gitignore(gitignore_path, config)
 
-    candidates = [
-        p for p in config.root.rglob("*.py")
-        if not any(part in config.ignore_dirs for part in p.parts)
-        # FIXED: Pass config
-        and not _matches_gitignore(p, gitignore_patterns, config)
-    ]
+    # Build glob patterns from config extensions
+    glob_patterns = [f"*.{ext}" for ext in config.extensions]
+
+    candidates = []
+    for pattern in glob_patterns:
+        candidates.extend(
+            p for p in config.root.rglob(pattern)
+            if not any(part in config.ignore_dirs for part in p.parts)
+            # FIXED: Pass config
+            and not _matches_gitignore(p, gitignore_patterns, config)
+        )
+
     py_files = []
     for p in candidates:
         # Audit: Log discovery attempt
@@ -104,24 +110,26 @@ def discover_py_files(config: Config) -> List[Path]:
         except Exception:
             audit_log_event(config, "file_discovered", path=str(p), size=0, error="stat_failed")
 
-        # Check MIME/content for non-Py masqueraders
-        mime, _ = mimetypes.guess_type(str(p))
-        if mime != "text/x-python":
-            audit_log_event(config, "file_skipped", path=str(p), reason=f"MIME {mime}")
-            logging.info(f"Skipping non-Py file '{p}': MIME {mime}")
-            continue
+        # Only check Python files for Python markers
+        if p.suffix == ".py":
+            # Check MIME/content for non-Py masqueraders
+            mime, _ = mimetypes.guess_type(str(p))
+            if mime and mime != "text/x-python":
+                audit_log_event(config, "file_skipped", path=str(p), reason=f"MIME {mime}")
+                logging.info(f"Skipping non-Py file '{p}': MIME {mime}")
+                continue
 
-        # Quick content check (first 1024 bytes)
-        try:
-            with open(p, "rb") as f:
-                header = f.read(1024)
-                if not (header.startswith(b"#!") or b"def " in header or b"class " in header):
-                    audit_log_event(config, "file_skipped", path=str(p), reason="No Python markers")
-                    logging.info(f"Skipping non-Py content '{p}': No Python markers")
-                    continue
-        except Exception:
-            audit_log_event(config, "file_skipped", path=str(p), reason="header_read_failed")
-            continue  # FIXED: Do not append this file
+            # Quick content check (first 1024 bytes)
+            try:
+                with open(p, "rb") as f:
+                    header = f.read(1024)
+                    if not (header.startswith(b"#!") or b"def " in header or b"class " in header):
+                        audit_log_event(config, "file_skipped", path=str(p), reason="No Python markers")
+                        logging.info(f"Skipping non-Py content '{p}': No Python markers")
+                        continue
+            except Exception:
+                audit_log_event(config, "file_skipped", path=str(p), reason="header_read_failed")
+                continue
 
         py_files.append(p)
         audit_log_event(config, "file_accepted", path=str(p))
