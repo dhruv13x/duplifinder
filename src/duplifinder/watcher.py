@@ -1,6 +1,5 @@
-import time
 import threading
-from typing import Callable, Any, List
+from typing import List, Optional
 from watchdog.events import PatternMatchingEventHandler, FileSystemEvent
 
 class CodeWatcher(PatternMatchingEventHandler):
@@ -9,8 +8,8 @@ class CodeWatcher(PatternMatchingEventHandler):
     """
     def __init__(
         self,
-        patterns: List[str] = None,
-        ignore_patterns: List[str] = None,
+        patterns: Optional[List[str]] = None,
+        ignore_patterns: Optional[List[str]] = None,
         ignore_directories: bool = True,
         case_sensitive: bool = False
     ):
@@ -21,7 +20,7 @@ class CodeWatcher(PatternMatchingEventHandler):
             case_sensitive=case_sensitive
         )
         self.dirty_event = threading.Event()
-        self.last_path = ""
+        self.last_path: str = ""
 
     def on_modified(self, event: FileSystemEvent) -> None:
         self._mark_dirty(event)
@@ -36,5 +35,8 @@ class CodeWatcher(PatternMatchingEventHandler):
         self._mark_dirty(event)
 
     def _mark_dirty(self, event: FileSystemEvent) -> None:
-        self.last_path = event.src_path
+        if isinstance(event.src_path, bytes):
+            self.last_path = event.src_path.decode('utf-8')
+        else:
+            self.last_path = event.src_path
         self.dirty_event.set()

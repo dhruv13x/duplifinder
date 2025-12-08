@@ -1,17 +1,19 @@
-# src/create_dump/banner.py
+# src/duplifinder/banner.py
 
 from rich.console import Console
 from rich.text import Text
 import math
 import random
 import os
+import colorsys
+from typing import List, Tuple, Optional
 
 console = Console()
 
-def lerp(a, b, t):
+def lerp(a: float, b: float, t: float) -> float:
     return a + (b - a) * t
 
-def blend(c1, c2, t):
+def blend(c1: Tuple[int, int, int], c2: Tuple[int, int, int], t: float) -> str:
     # Gemini gamma + wave shaping
     t = t ** 1.47
     t = 0.82 * t + 0.08 * math.sin(3.2 * t)
@@ -20,17 +22,7 @@ def blend(c1, c2, t):
     b = int(lerp(c1[2], c2[2], t))
     return f"#{r:02x}{g:02x}{b:02x}"
 
-def print_logo():
-    import os
-    import random
-    import sys
-    import colorsys
-    import math
-    from rich.console import Console
-    from rich.text import Text
-
-    console = Console()
-
+def print_logo() -> None:
     # --- logo (unchanged) ---
     logo = r"""     
 ░     
@@ -48,21 +40,8 @@ def print_logo():
                      ░░░░░                                                                          
 """.strip().split("\n")
 
-    # helper math functions (unchanged)
-    def lerp(a, b, t):
-        return a + (b - a) * t
-
-    def blend(c1, c2, t):
-        # Gemini gamma + wave shaping (unchanged)
-        t = t ** 1.47
-        t = 0.82 * t + 0.08 * math.sin(3.2 * t)
-        r = int(lerp(c1[0], c2[0], t))
-        g = int(lerp(c1[1], c2[1], t))
-        b = int(lerp(c1[2], c2[2], t))
-        return f"#{r:02x}{g:02x}{b:02x}"
-
     # --- fixed palettes fallback (keeps your original palettes available) ---
-    fixed_palettes = [
+    fixed_palettes: List[List[Tuple[int, int, int]]] = [
         [
             (0x2E, 0x7B, 0xEA),
             (0x6C, 0x5B, 0xD8),
@@ -112,21 +91,19 @@ def print_logo():
 
     # If env var is set and numeric -> use fixed palette index (reproducible)
     idx_env = os.getenv("CREATE_DUMP_PALETTE")
+    palette: Optional[List[Tuple[int, int, int]]] = None
     if idx_env is not None:
         try:
             idx = int(idx_env)
             if 0 <= idx < len(fixed_palettes):
                 palette = list(fixed_palettes[idx])
-                mode = f"fixed[{idx}]"
             else:
                 raise ValueError
         except Exception:
             # bad value -> fall through to procedural generation
             palette = None
-            mode = "procedural (bad env fallback)"
     else:
         palette = None
-        mode = "procedural"
 
     # If we didn't get a fixed palette, procedurally generate one (practically infinite variations)
     if palette is None:
@@ -170,7 +147,6 @@ def print_logo():
                 new_palette.append((int(round(rr * 255)), int(round(gg * 255)), int(round(bb * 255))))
             palette = new_palette
 
-        mode = "procedural"
 
     # permute the palette slightly so gradients shift even when endpoints similar
     _sysrand.shuffle(palette)

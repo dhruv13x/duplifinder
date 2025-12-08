@@ -5,7 +5,6 @@
 import argparse
 import logging
 import pathlib
-from typing import Dict
 from importlib import metadata
 
 from .config import Config, load_config_file, DEFAULT_IGNORES

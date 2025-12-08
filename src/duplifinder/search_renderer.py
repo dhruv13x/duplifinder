@@ -29,7 +29,6 @@ def render_search(
 
         # Print the main title
         title_color = "green" if count == 1 else "blue"
-        count_color = "green" if count == 1 else "bold yellow"
         title_text = "Verified singleton" if count == 1 else f"found {count} time(s)"
         
         console.print(f"\n[{title_color}]{spec}[/{title_color}] {title_text}:")

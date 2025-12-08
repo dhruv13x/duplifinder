@@ -5,7 +5,7 @@ import json
 import time
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 from .config import Config
 
@@ -19,7 +19,7 @@ class CacheManager:
         self.config_hash = self._compute_config_hash(config) if config else None
         self.load()
 
-    def load(self):
+    def load(self) -> None:
         """Load cache from disk."""
         if self.cache_path.exists():
             try:
@@ -40,7 +40,7 @@ class CacheManager:
         if self.config_hash:
             self.data["_config_hash"] = self.config_hash
 
-    def save(self):
+    def save(self) -> None:
         """Save cache to disk."""
         try:
             with open(self.cache_path, "w", encoding="utf-8") as f:
@@ -55,7 +55,7 @@ class CacheManager:
             return entry.get("data")
         return None
 
-    def set(self, file_path: str, file_hash: str, data: Any):
+    def set(self, file_path: str, file_hash: str, data: Any) -> None:
         """Update cache entry."""
         self.data[str(file_path)] = {
             "hash": file_hash,

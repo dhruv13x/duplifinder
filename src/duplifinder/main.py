@@ -4,7 +4,6 @@
 
 import sys
 import time
-from typing import Dict, List, Tuple
 from pydantic import ValidationError
 
 from .cli import create_parser, build_config
