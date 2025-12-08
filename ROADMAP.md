@@ -1,75 +1,54 @@
-# Duplifinder: Project Roadmap
+# Strategic Roadmap (V3.0)
 
-This document outlines the strategic vision for `duplifinder`, organized by ambitious phases from core foundations to industry-disrupting capabilities. It reflects our commitment to evolving from a duplicate detection tool into an intelligent code quality ecosystem.
-
----
-
-## Phase 1: Foundation (CRITICALLY MUST HAVE)
-
-**Focus**: Core functionality, stability, security, and basic usage. These items ensure the tool is reliable, performant, and usable in standard workflows.
-
-- [x] **AST-Powered Detection**: Core engine for finding duplicate classes, functions, and async defs.
-- [x] **Text Pattern Matching**: Regex-based search for arbitrary text snippets (TODOs, FIXMEs).
-- [x] **Token Similarity Analysis**: Detect near-duplicates using tokenization and similarity ratios.
-- [x] **Parallel Processing**: Multithreading and multiprocessing support for high-performance scanning.
-- [x] **Rich Console Output**: Human-readable, colored reports using `rich`.
-- [x] **JSON Output**: Machine-readable output for CI/CD integration and external processing.
-- [x] **Configuration File**: Robust configuration via `.duplifinder.yaml`.
-- [x] **Enhanced Error Handling**: Granular error reporting and graceful failure modes.
-- [x] **CI/CD Integration**: Exit codes, thresholds, and pipeline-friendly outputs.
-- [x] **Improved Performance Metrics**: Detailed timing, memory usage, and phase breakdown stats.
-- [x] **Code Coverage**: Test suite coverage exceeding 90%.
-- [x] **Audit Logging**: Secure, structured logging for file access and tool operations.
-- [x] **Caching**: Implement file hash caching to drastically speed up re-scans of unchanged files.
-- [x] **HTML Reports**: Generate self-contained, interactive HTML reports for easier sharing and analysis.
+This living document outlines the strategic direction for `duplifinder`, balancing innovation with stability. It follows a phased execution strategy to ensure a solid foundation before ecosystem expansion.
 
 ---
 
-## Phase 2: The Standard (MUST HAVE)
+## 🏁 Phase 0: The Core (Stability & Debt)
+**Goal**: Build a solid, reliable foundation. Prioritizing code quality and developer experience.
 
-**Focus**: Feature parity with top competitors, user experience improvements, and robust developer tooling.
-
-- [x] **Pre-commit Hook**: Official hook to prevent duplicates from entering the codebase.
-- [x] **Automated Refactoring Suggestions**: Simple, actionable advice for resolving common duplication patterns.
-- [x] **Support for More Languages**: Extend token/text detection to JavaScript, TypeScript, and Java.
-- [x] **Watch Mode**: "Live" scanning that updates results as you save files (DevEx improvement).
-- [ ] **Git "Blame" Integration**: Identify who introduced a duplicate and when (Code ownership context).
-- [ ] **Interactive Terminal UI (TUI)**: Explore duplicates directly in the terminal with keybindings.
+- [x] **Testing**: Maintain coverage > 90%. `[Debt]` `[S]`
+- [x] **CI/CD**: Fix Linting (Ruff). `[Debt]` `[S]`
+- [x] **CI/CD**: Fix Type Checking (Mypy). `[Debt]` `[S]`
+- [ ] **Refactoring**: Improve `application.py` and `cache.py` structure. `[Debt]` `[M]`
+- [x] **Documentation**: Comprehensive README. `[Docs]` `[S]`
 
 ---
 
-## Phase 3: The Ecosystem (INTEGRATION & SHOULD HAVE)
+## 🚀 Phase 1: The Standard (Feature Parity)
+**Goal**: Achieve competitiveness with market standards through improved UX and configuration.
 
-**Focus**: Webhooks, API exposure, 3rd party plugins, SDK generation, and extensibility. Making `duplifinder` a platform.
-
-- [ ] **GitHub Action**: Official Marketplace action for zero-config CI setup.
-- [ ] **Webhook Support**: Notifications for Slack, Discord, or Microsoft Teams on new regression.
-- [ ] **Plugin Architecture**: API for community-contributed finders (e.g., custom AST logic).
-- [ ] **Public API / SDK**: A Python library allowing other tools to import and drive `duplifinder` programmatically.
-- [ ] **Code Quality Platform Integration**: Native report formats for SonarQube, CodeClimate, and others.
-- [ ] **IDE Integration**: VS Code and PyCharm extensions for inline duplicate highlighting.
+- [ ] **UX**: Interactive Terminal UI (TUI). `[Feat]` `[M]`
+- [ ] **UX**: Git "Blame" Integration. `[Feat]` `[M]`
+- [ ] **Config**: Robust settings management & Schema Validation. `[Feat]` `[S]`
+- [ ] **Performance**: Optimization of AST visitor & Tokenizer. `[Feat]` `[M]`
+- [ ] **Error Handling**: Context-aware error messages for config issues. `[Feat]` `[S]`
 
 ---
 
-## Phase 4: The Vision (GOD LEVEL)
+## 🔌 Phase 2: The Ecosystem (Integration)
+**Goal**: Enable interoperability and extensibility.
+*Requires Phase 1 completion.*
 
-**Focus**: "Futuristic" features, AI integration, advanced automation, and industry-disrupting capabilities.
-
-- [ ] **AI-Powered Refactoring**: LLM integration to rewrite duplicated logic into shared abstractions automatically.
-- [ ] **Cross-Repository Analysis**: Scan an entire GitHub organization to find duplication *between* microservices.
-- [ ] **Semantic Code Search**: Vector-based embeddings to find code that *does* the same thing but *looks* different.
-- [ ] **"Self-Healing" Codebase**: Autonomous agents that detect, refactor, run tests, and open PRs for duplicates.
-- [ ] **Technical Debt Calculator**: Estimate the financial cost of duplication (Time × Avg Salary) to justify refactoring.
-- [ ] **Predictive Analysis**: Machine learning models to identify "hotspots" likely to accumulate duplication.
+- [ ] **API**: Public Python API / SDK. `[Feat]` `[L]`
+- [ ] **Plugins**: Extension system for custom finders. `[Feat]` `[L]`
+- [ ] **Integration**: Official GitHub Action. `[Feat]` `[M]`
+- [ ] **Integration**: Webhook Support (Slack/Teams). `[Feat]` `[S]`
+- [ ] **IDE**: VS Code / PyCharm Extensions. `[Feat]` `[L]`
 
 ---
 
-## The Sandbox (OUT OF THE BOX / OPTIONAL)
+## 🔮 Phase 3: The Vision (Innovation)
+**Goal**: Become the market leader through AI and Cloud capabilities.
+*Requires Phase 2 completion.*
 
-**Focus**: Wild, creative, experimental ideas that set the project apart.
+- [ ] **AI**: LLM Integration for Refactoring Suggestions. `[Feat]` `[L]` (Risk: High)
+- [ ] **Cloud**: Cross-Repository Analysis. `[Feat]` `[L]`
+- [ ] **Cloud**: "Self-Healing" Codebase (Auto-PRs). `[Feat]` `[L]`
+- [ ] **Analytics**: Technical Debt Calculator & Trends. `[Feat]` `[M]`
 
-- [ ] **Gamification**: Leaderboards for "Most Unique Code" and "Top Refactorer".
-- [ ] **Code Archaeology**: Timelines showing the evolution and spread of copy-pasted blocks.
-- [ ] **3D Codebase Visualization**: Render the project as a city where duplicates are connected bridges.
-- [ ] **Jupyter Notebook Scanning**: Special handling for `.ipynb` files to find logic duplicated across data science experiments.
-- [ ] **Dependency Graph Visualization**: Visualizing how duplicates couple modules together.
+---
+
+## Legend
+- **Tags**: `[Debt]` (Technical Debt), `[Feat]` (New Feature), `[Bug]` (Bug Fix), `[Docs]` (Documentation).
+- **Estimates**: `[S]` (Small), `[M]` (Medium), `[L]` (Large).

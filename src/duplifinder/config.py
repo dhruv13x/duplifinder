@@ -86,7 +86,6 @@ class Config(BaseModel):
     def validate_search_specs(cls, v: List[str]) -> List[str]:
         if not v:
             return v
-        import re
         valid_types = KNOWN_TYPES
         for spec in v:
             parts = spec.strip().split(maxsplit=1)

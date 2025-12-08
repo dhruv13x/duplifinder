@@ -6,7 +6,6 @@ import ast
 from collections import defaultdict
 from typing import Dict, List, Set, Tuple
 
-from .config import KNOWN_TYPES
 
 
 class EnhancedDefinitionVisitor(ast.NodeVisitor):

@@ -3,9 +3,8 @@
 """Renderer for duplicate detection outputs (console/JSON/metrics)."""
 
 import json
-import logging
 import time
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Any
 
 from rich.console import Console
 from rich.table import Table

@@ -13,7 +13,7 @@ import threading
 import time
 import tracemalloc
 from pathlib import Path
-from typing import Callable, Generator, List, Any, Dict, Optional
+from typing import Callable, Generator, List, Any, Dict
 
 from tqdm import tqdm
 
